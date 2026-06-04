@@ -1,0 +1,25 @@
+provider: ctp
+source_message: CThostFtdcDepthMarketDataField
+target_event: BookSnapshot
+fields:
+  InstrumentID:
+    target: header.instrument_id
+    transform: symbol_map.lookup
+  UpdateTime:
+    target: header.source_ts_ns
+    transform: combine_with_ActionDay_and_UpdateMillisec
+  LastPrice:
+    target: last_price
+    transform: price_to_fixed
+  BidPrice1:
+    target: bids[0].price
+    transform: price_to_fixed
+  BidVolume1:
+    target: bids[0].quantity
+    transform: qty_to_fixed
+  AskPrice1:
+    target: asks[0].price
+    transform: price_to_fixed
+  AskVolume1:
+    target: asks[0].quantity
+    transform: qty_to_fixed

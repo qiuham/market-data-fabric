@@ -1,0 +1,39 @@
+runtime_profile: low_latency
+
+threads:
+  feed_io:
+    cpu: 2
+    scheduler: fifo
+    priority: 70
+  decoder:
+    cpu: 3
+    scheduler: fifo
+    priority: 65
+  book_builder:
+    cpu: 4
+    scheduler: fifo
+    priority: 60
+  publisher:
+    cpu: 5
+    scheduler: fifo
+    priority: 55
+  recorder:
+    cpu: 8
+    scheduler: default
+    priority: 0
+  control_plane:
+    cpu: 9
+    scheduler: default
+    priority: 0
+
+memory:
+  preallocate: true
+  lock_pages: true
+  prefer_huge_pages: false
+  ring_bytes: 268435456
+  arena_bytes: 67108864
+
+clock:
+  source: monotonic_raw
+  calibrate_tsc: false
+  require_ptp_sync: true

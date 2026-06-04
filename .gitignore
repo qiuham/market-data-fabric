@@ -1,0 +1,39 @@
+# Build outputs
+build/
+out/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+compile_commands.json
+
+# Binaries and libraries
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Runtime data
+logs/
+data/
+*.log
+*.mdf
+*.pcap
+*.pcapng
+
+# Local secrets/config overrides
+.env
+*.local.yaml
+*.secret.yaml
+configs/prod/**/*secret*.yaml
+
+# Vendor SDK binaries should be installed outside git unless explicitly approved
+libs/md-adapters/**/vendor/

@@ -1,0 +1,16 @@
+node:
+  roles: [gateway]
+  node_id: dev-local
+
+source:
+  id: 1
+  name: mock
+  adapter: mock
+
+transport:
+  publishers:
+    - type: file
+      path: ./data/mock
+
+runtime:
+  heartbeat_timeout_ms: 5000

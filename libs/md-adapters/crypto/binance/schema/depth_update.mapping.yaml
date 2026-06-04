@@ -1,0 +1,20 @@
+provider: binance
+source_message: depthUpdate
+target_event: BookDeltaBatch
+fields:
+  s:
+    target: header.instrument_id
+    transform: symbol_map.lookup
+  E:
+    target: header.source_ts_ns
+    transform: ms_to_ns
+  U:
+    target: first_update_id
+  u:
+    target: header.seq
+  b:
+    target: bid_deltas
+    transform: price_qty_array_to_book_deltas
+  a:
+    target: ask_deltas
+    transform: price_qty_array_to_book_deltas

@@ -1,0 +1,9 @@
+instruments:
+  - instrument_id: 10000001
+    canonical_symbol: BTC-USDT-SPOT
+    venue: BINANCE
+    asset_class: crypto_spot
+    external_symbols:
+      binance_spot: BTCUSDT
+    price_scale: 100
+    quantity_scale: 100000000
