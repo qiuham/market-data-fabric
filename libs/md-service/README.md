@@ -4,6 +4,8 @@
 
 职责：
 
+- 根据配置选择 `raw_only`、`normalized_only` 或 `dual` 数据模式。
+
 - 加载配置。
 - 构建 adapter -> normalizer -> publisher pipeline。
 - 管理 adapter 生命周期。

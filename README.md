@@ -44,7 +44,7 @@ libs/
 
 schemas/                网络传输、落盘、跨语言消费使用的消息 schema。
 configs/                开发、生产和参考数据配置示例。
-docs/                   架构、部署、字段转换、高频准备度等文档。
+docs/                   架构、部署、字段转换、数据模式、高频准备度等文档。
 tests/                  单元、集成、回放、fuzz、benchmark 测试。
 scripts/                开发、CI、运维脚本。
 tools/                  构建期工具预留目录，例如 md-codegen。
@@ -77,6 +77,18 @@ md-node --roles=gateway,controller
 ```
 
 数据面只负责接收、解析、标准化、校验、构建盘口、发布和录制。它应该尽量简单、低抖动、少阻塞。
+
+## 数据模式
+
+gateway 支持三种数据模式，方便先做 raw data 获取，再逐步接入标准化转换：
+
+```text
+raw_only         只采集/录制供应商原始数据，不输出标准化事件。
+normalized_only  只输出标准化事件，不额外保留原始数据。
+dual             同时保留 raw 数据和标准化事件，长期生产更推荐。
+```
+
+详见 `docs/data-modes.md`。
 
 ## 控制面职责
 

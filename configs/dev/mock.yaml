@@ -7,6 +7,27 @@ source:
   name: mock
   adapter: mock
 
+pipeline:
+  mode: dual  # raw_only | normalized_only | dual
+
+raw_data:
+  enabled: true
+  record: true
+  publish: false
+  format: provider_native
+  path: ./data/raw/mock
+
+normalization:
+  enabled: true
+  require_refdata: true
+  unknown_instrument_policy: raw_only  # reject | raw_only | allow_pending
+
+normalized_data:
+  enabled: true
+  record: true
+  publish: true
+  path: ./data/normalized/mock
+
 transport:
   publishers:
     - type: file
