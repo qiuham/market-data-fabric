@@ -9,4 +9,6 @@ CTP 期货行情 adapter 骨架。
 - 处理交易日、ActionDay、UpdateTime、UpdateMillisec 等时间语义。
 - 将 `CThostFtdcDepthMarketDataField` 转换成内部标准事件。
 
+字段映射示例放在 `mapping/depth_market_data.yaml`。
+
 CTP SDK 头文件和二进制库默认不提交到仓库，后续通过本地依赖或受控 vendor 目录接入。

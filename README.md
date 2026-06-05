@@ -96,7 +96,7 @@ md-node --roles=gateway,controller
 ```text
 libs/md-adapters/{asset_class}/{provider}/
   src/*_field_mapper.cpp
-  schema/*.mapping.yaml
+  mapping/*.yaml
   docs/field_mapping.md
   tests/*_field_mapper_test.cpp
 ```

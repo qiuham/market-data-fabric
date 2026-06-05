@@ -10,4 +10,4 @@ Binance 行情 adapter 骨架。
 - 检查 update id / sequence gap。
 - 将外部字段转换为 `md-core` 标准事件。
 
-字段映射示例放在 `schema/depth_update.mapping.yaml`。
+字段映射示例放在 `mapping/depth_update.yaml`。

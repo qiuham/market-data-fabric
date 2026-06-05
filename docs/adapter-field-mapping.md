@@ -4,6 +4,8 @@
 
 ## 目录位置
 
+字段映射必须落在具体 provider 目录下：
+
 ```text
 libs/md-adapters/{asset_class}/{provider}/
   include/md/adapters/{provider}/
@@ -12,8 +14,8 @@ libs/md-adapters/{asset_class}/{provider}/
   src/
     *_field_mapper.cpp
     *_normalizer.cpp
-  schema/
-    *.mapping.yaml
+  mapping/
+    *.yaml
   docs/
     field_mapping.md
   tests/
@@ -57,9 +59,9 @@ CThostFtdcDepthMarketDataField
 
 服务层可以创建上下文，但不应该理解供应商字段细节。
 
-## mapping.yaml 映射文件
+## mapping/*.yaml 映射文件
 
-`schema/*.mapping.yaml` 用来记录外部字段到内部字段的映射关系。它的目的包括：
+`mapping/*.yaml` 用来记录外部字段到内部字段的映射关系。它的目的包括：
 
 - 给人查看。
 - 给测试生成器使用。
@@ -81,6 +83,13 @@ fields:
     transform: price_to_fixed
 ```
 
+
+## common 目录边界
+
+`common/` 可以放所有 adapter 都遵守的原则、术语说明和共享工具，但不放具体供应商报文字段映射。
+
+原因是即使同一个市场，不同供应商的字段名、二进制布局、序号语义、时间字段和异常值处理也可能完全不同。
+
 ## Lv3 映射要求
 
 如果数据源提供订单级事件，应映射为：
@@ -92,4 +101,4 @@ fields:
 
 ## 不要集中放 mapper
 
-不建议做一个全局 `md-mappers` 目录集中放所有供应商转换逻辑。字段映射应该和 adapter 代码、测试、文档放在一起，便于维护和升级。
+不建议做一个全局 `md-mappers` 目录集中放所有供应商转换逻辑。字段映射应该和具体 provider 的 adapter 代码、测试、文档放在一起，便于维护和升级。`common/` 只放原则、术语和可复用工具，不放具体供应商报文字段映射。
