@@ -6,7 +6,7 @@
 
 `md-refdata` 负责品种和市场上下文，包括内部 instrument id、外部 symbol 映射、交易所、资产类型、价格精度、数量精度、交易日历和交易时段。
 
-`md-book` 负责盘口构建和校验。不同市场的盘口语义差异很大，因此需要分别支持 L1、有限档快照、价位聚合增量、订单级盘口等模型。
+`md-book` 负责盘口构建和校验。不同市场的盘口语义差异很大，因此需要分别支持 L1、有限档快照、价位聚合增量、Lv3 订单级盘口等模型。
 
 `md-codecs` 放通用协议解析辅助能力，例如 JSON、二进制 frame、FIX/SBE 风格消息、编码转换等。具体供应商字段语义仍然属于 adapter。
 
@@ -20,7 +20,7 @@
 
 `md-runtime` 负责低延迟运行时钩子，例如 CPU 绑核、调度策略、clock reader、内存锁定、预分配和平台相关调优。它是可选层，不应让 `md-core` 变成平台专属库。
 
-`md-client` 是消费端库。策略可以通过它消费 live 或 replay 数据，而不需要关心底层传输是 NATS、Kafka、共享内存还是其他方式。
+`md-client` 是消费端库。策略可以通过它消费 live 或 replay 数据，而不需要关心底层传输是 NATS、Kafka、共享内存还是其他方式。对于 Lv3 数据，消费端可以订阅 `OrderEvent` 和 `Execution`。
 
 ## Kafka 风格角色模型
 
@@ -62,7 +62,7 @@ source -> adapter -> decoder -> field mapper -> normalizer -> book/sequence -> p
 
 - `md-core`：核心事件模型。
 - 轻量 `md-refdata`
-- `md-book`：盘口构建模块。
+- `md-book`：L1/L2/L3 盘口构建模块。
 - 部分 `md-codecs`
 - 部分 feed decoder
 - `md-runtime` 低延迟运行时钩子

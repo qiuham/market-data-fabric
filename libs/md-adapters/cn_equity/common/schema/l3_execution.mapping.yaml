@@ -1,0 +1,32 @@
+provider: cn_equity_l3_provider
+source_message: tick_trade
+target_event: Execution
+fields:
+  SecurityID:
+    target: header.instrument_id
+    transform: symbol_map.lookup
+  ChannelNo:
+    target: channel_id
+  ApplSeqNum:
+    target: execution_seq
+  TradeNo:
+    target: trade_id
+  BuyOrderNo:
+    target: buy_order_id
+  SellOrderNo:
+    target: sell_order_id
+  TransactTime:
+    target: header.source_ts_ns
+    transform: exchange_time_to_ns
+  TradePrice:
+    target: price
+    transform: price_to_fixed
+  TradeQty:
+    target: quantity
+    transform: qty_to_fixed
+  ExecType:
+    target: execution_type
+    transform: map_cn_equity_exec_type
+  TradingPhaseCode:
+    target: trading_phase
+    transform: map_trading_phase

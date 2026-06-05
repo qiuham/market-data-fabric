@@ -13,6 +13,8 @@ enum class EventMask : unsigned {
     Quote = 1u << 1,
     Book = 1u << 2,
     Status = 1u << 3,
+    Order = 1u << 4,
+    Execution = 1u << 5,
 };
 
 struct Subscription {
@@ -32,6 +34,8 @@ public:
     virtual ~MarketDataClient() = default;
     virtual void subscribe(const Subscription& subscription) = 0;
     virtual void on_trade(std::function<void(const md::core::Trade&)> handler) = 0;
+    virtual void on_order_event(std::function<void(const md::core::OrderEvent&)> handler) = 0;
+    virtual void on_execution(std::function<void(const md::core::Execution&)> handler) = 0;
     virtual void run() = 0;
 };
 

@@ -1,0 +1,29 @@
+provider: cn_futures_l3_provider
+source_message: order_event
+target_event: OrderEvent
+fields:
+  InstrumentID:
+    target: header.instrument_id
+    transform: symbol_map.lookup
+  SequenceNo:
+    target: header.seq
+  OrderSysID:
+    target: order_id
+  ExchangeTime:
+    target: header.source_ts_ns
+    transform: exchange_time_to_ns
+  Direction:
+    target: side
+    transform: map_futures_side
+  OrderAction:
+    target: action
+    transform: map_order_action
+  Price:
+    target: price
+    transform: price_to_fixed
+  Volume:
+    target: quantity
+    transform: qty_to_fixed
+  VolumeRemain:
+    target: remaining_quantity
+    transform: qty_to_fixed

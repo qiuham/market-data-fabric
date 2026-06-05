@@ -7,7 +7,7 @@
 - NATS/Kafka/shared memory/replay 等消费方式。
 - schema 解码。
 - topic/subject 命名规则。
-- 事件回调分发。
+- 事件回调分发，包括 `OrderEvent` 和 `Execution`。
 - symbol/instrument 映射辅助。
 - sequence/gap 检查。
 - live 和 replay 的统一接口。

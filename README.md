@@ -14,6 +14,7 @@
 ## 设计目标
 
 - 将不同外部行情源标准化为统一的内部事件模型。
+- 统一支持 Lv3 订单级事件模型：`OrderEvent` 和 `Execution`。
 - 保持 `md-core` 不依赖任何供应商 SDK、消息队列、数据库或服务框架。
 - 将供应商字段转换放在各自 adapter 目录，避免污染服务层。
 - 支持 NATS、Kafka、共享内存、TCP、UDP 组播、文件等多种分发和落盘方式。
@@ -31,7 +32,7 @@ apps/
 libs/
   md-core/              核心事件类型、ID、时间戳、序号、sink 接口。
   md-refdata/           品种、交易所、资产类型、交易时段、精度、symbol 映射。
-  md-book/              L1/L2/MBO 盘口构建和校验。
+  md-book/              L1/L2/L3 MBO 盘口构建和校验。
   md-codecs/            通用协议解析辅助工具。
   md-adapters/          外部行情源 adapter 和供应商字段映射。
   md-transport/         NATS、Kafka、共享内存、TCP、组播、文件等传输层。
@@ -100,7 +101,7 @@ libs/md-adapters/{asset_class}/{provider}/
   tests/*_field_mapper_test.cpp
 ```
 
-标准事件字段只在 `md-core` 定义。symbol、价格精度、数量精度、交易日、交易时段等上下文由 `md-refdata` 提供。
+标准事件字段只在 `md-core` 定义。symbol、价格精度、数量精度、交易日、交易时段等上下文由 `md-refdata` 提供。Lv3 事件使用 `OrderEvent` 和 `Execution`，不允许 adapter 用 L2 聚合盘口伪造订单级数据。
 
 ## 消费端库
 
@@ -124,7 +125,7 @@ cmake --build build
 
 ## 路线图
 
-1. 稳定 `md-core` 事件模型、参考数据模型和 replay 文件格式。
+1. 稳定 `md-core` 事件模型、Lv3 订单级模型、参考数据模型和 replay 文件格式。
 2. 实现 mock/replay adapter 和一个 crypto adapter。
 3. 增加 NATS 发布和 `md-client-nats`。
 4. 增加 CTP、IB 等 adapter，并通过平台/依赖开关隔离闭源 SDK。

@@ -1,6 +1,6 @@
 # Adapter 字段映射
 
-供应商字段映射必须放在每个 adapter 自己的目录，不放在 `md-service`。原因是不同供应商的字段含义、时间语义、盘口模型、序号规则、异常值处理和重连行为都不同。
+供应商字段映射必须放在每个 adapter 自己的目录，不放在 `md-service`。原因是不同供应商的字段含义、时间语义、盘口模型、序号规则、异常值处理和重连行为都不同。Lv3 字段映射同样遵循这个规则。
 
 ## 目录位置
 
@@ -80,6 +80,15 @@ fields:
     target: last_price
     transform: price_to_fixed
 ```
+
+## Lv3 映射要求
+
+如果数据源提供订单级事件，应映射为：
+
+- `OrderEvent`：逐笔委托、order add/modify/cancel/delete/replace。
+- `Execution`：逐笔成交、order executed、trade match。
+
+如果数据源只提供价位聚合盘口，只能映射为 `BookDelta` 或 `BookSnapshot`，不能伪造 `OrderEvent`。
 
 ## 不要集中放 mapper
 

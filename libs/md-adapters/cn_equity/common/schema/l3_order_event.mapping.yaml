@@ -1,0 +1,31 @@
+provider: cn_equity_l3_provider
+source_message: tick_order
+target_event: OrderEvent
+fields:
+  SecurityID:
+    target: header.instrument_id
+    transform: symbol_map.lookup
+  ChannelNo:
+    target: channel_id
+  ApplSeqNum:
+    target: order_seq
+  OrderNo:
+    target: order_id
+  TransactTime:
+    target: header.source_ts_ns
+    transform: exchange_time_to_ns
+  Side:
+    target: side
+    transform: map_cn_equity_side
+  OrderType:
+    target: order_type
+    transform: map_cn_equity_order_type
+  OrderQty:
+    target: quantity
+    transform: qty_to_fixed
+  Price:
+    target: price
+    transform: price_to_fixed
+  TradingPhaseCode:
+    target: trading_phase
+    transform: map_trading_phase

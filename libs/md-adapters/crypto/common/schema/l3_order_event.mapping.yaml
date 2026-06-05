@@ -1,0 +1,36 @@
+provider: crypto_l3_provider
+source_message: order_event
+target_event: OrderEvent
+fields:
+  symbol:
+    target: header.instrument_id
+    transform: symbol_map.lookup
+  sequence:
+    target: header.seq
+  exchange_sequence:
+    target: header.exchange_seq
+  event_time:
+    target: header.source_ts_ns
+    transform: exchange_time_to_ns
+  order_id:
+    target: order_id
+  previous_order_id:
+    target: original_order_id
+  side:
+    target: side
+    transform: map_side
+  action:
+    target: action
+    transform: map_order_action
+  type:
+    target: order_type
+    transform: map_order_type
+  price:
+    target: price
+    transform: price_to_fixed
+  quantity:
+    target: quantity
+    transform: qty_to_fixed
+  remaining_quantity:
+    target: remaining_quantity
+    transform: qty_to_fixed
