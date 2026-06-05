@@ -16,6 +16,9 @@ raw_data:
   publish: false
   format: provider_native
   path: ./data/raw/mock
+  storage:
+    max_total_bytes: 104857600  # 100 MiB
+    limit_policy: stop_recording  # stop_recording | drop_new | rotate_delete_oldest
 
 normalization:
   enabled: true
