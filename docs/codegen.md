@@ -29,7 +29,7 @@
 
 ## 适合生成的内容
 
-- provider raw type。
+- provider message type。
 - 字段常量和消息类型枚举。
 - 简单字段拷贝代码。
 - enum 映射表。
@@ -66,7 +66,7 @@ tools/md-codegen/
 
 ```text
 libs/md-adapters/{asset_class}/{provider}/generated/
-  *_raw.hpp
+  *_provider_message.generated.hpp
   *_mapper.generated.hpp
   *_mapper.generated.cpp
 ```
@@ -129,11 +129,11 @@ provider_api.generated.json
 
 ```cpp
 inline bool map_depth_update(
-    const ProviderDepthUpdateRaw& src,
+    const ProviderDepthUpdateMessage& src,
     const MappingContext& ctx,
     md::core::BookDelta& out) noexcept {
     out.header.instrument_id = ctx.symbols.lookup(src.symbol);
-    out.header.seq = src.sequence;
+    out.header.event_seq = src.sequence;
     out.price = ctx.price.to_fixed(src.price);
     out.quantity = ctx.quantity.to_fixed(src.quantity);
     return true;

@@ -26,6 +26,8 @@ logs/
 data/
 *.log
 *.mdf
+*.mdfmsg
+*.mdfraw
 *.pcap
 *.pcapng
 

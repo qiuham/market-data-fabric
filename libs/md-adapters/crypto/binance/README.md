@@ -1,12 +1,12 @@
 # Binance 行情适配器
 
-Binance 行情 adapter 当前先实现 Spot raw MVP 的基础能力。
+Binance 行情 adapter 当前先实现 Spot raw MVP 的基础能力。raw 只表示 payload 是供应商原始报文，外层仍使用统一 `MessageEnvelope`。
 
 已落地：
 
 - Spot stream 名称生成：`trade`、`aggTrade`、`bookTicker`、`depth`、`depth@100ms`、`depth5/10/20`。
 - Spot WebSocket URL 生成：生产、market-data-only、testnet、demo 环境。
-- raw envelope 模板：不解析 payload，只用连接和订阅层已知的信息填 `source_id`、`connection_id`、`stream_id`、`capture_seq`、`recv_ts_ns`。
+- `MessageEnvelope` 模板：不解析 payload，只用连接和订阅层已知的信息填 `source_id`、`connection_id`、`stream_id`、`capture_seq`、`recv_ts_ns`。
 
 后续职责：
 

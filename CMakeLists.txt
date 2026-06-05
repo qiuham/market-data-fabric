@@ -46,11 +46,15 @@ endif()
 if (MDF_BUILD_TESTS)
   enable_testing()
 
-  add_executable(mdf-raw-file-smoke tests/raw_file_smoke.cpp)
-  target_link_libraries(mdf-raw-file-smoke PRIVATE md-core md-replay md-adapters-binance)
-  add_test(NAME raw_file_smoke COMMAND mdf-raw-file-smoke)
+  add_executable(mdf-message-log-smoke tests/message_log_smoke.cpp)
+  target_link_libraries(mdf-message-log-smoke PRIVATE md-core md-replay md-adapters-binance)
+  add_test(NAME message_log_smoke COMMAND mdf-message-log-smoke)
 
   add_executable(mdf-binance-spot-streams-smoke tests/binance_spot_streams_smoke.cpp)
   target_link_libraries(mdf-binance-spot-streams-smoke PRIVATE md-adapters-binance)
   add_test(NAME binance_spot_streams_smoke COMMAND mdf-binance-spot-streams-smoke)
+
+  add_executable(mdf-spsc-ring-smoke tests/spsc_ring_smoke.cpp)
+  target_link_libraries(mdf-spsc-ring-smoke PRIVATE md-core md-runtime)
+  add_test(NAME spsc_ring_smoke COMMAND mdf-spsc-ring-smoke)
 endif()

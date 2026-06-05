@@ -127,13 +127,13 @@ stop_recording
   达到上限后停止继续录制 raw 数据，但 gateway 可以继续运行并上报 recorder_limited 状态。适合开发环境。
 
 drop_new
-  达到上限后丢弃新 raw frame。适合只想保留最早样本的场景。
+  达到上限后丢弃新 message frame。适合只想保留最早样本的场景。
 
 rotate_delete_oldest
   达到上限后删除最老文件，为新数据腾空间。适合长期运行，但第一版可以先不实现。
 ```
 
-当前开发配置使用 `stop_recording`，上限为 100 MiB。`RawWriter` 已把这个限制作为 bounded storage 的硬约束。
+当前开发配置使用 `stop_recording`，上限为 100 MiB。`MessageLogWriter` 已把这个限制作为 bounded storage 的硬约束。
 
 ## unknown_instrument_policy
 
@@ -182,4 +182,4 @@ normalized replay
   用来给策略提供统一历史行情输入。
 ```
 
-因此建议生产尽量保留 raw 数据，至少保留一段时间。第一版 raw 文件格式见 `docs/raw-capture.md`。
+因此建议生产尽量保留 raw 数据，至少保留一段时间。第一版统一 message log 格式见 `docs/raw-capture.md`。

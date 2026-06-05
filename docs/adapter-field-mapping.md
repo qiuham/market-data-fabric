@@ -28,7 +28,7 @@ libs/md-adapters/{asset_class}/{provider}/
 
 ```text
 vendor bytes / SDK callback
-  -> provider raw type
+  -> provider message type
   -> provider field mapper
   -> md::core event
 ```
@@ -37,7 +37,7 @@ vendor bytes / SDK callback
 
 ```text
 Binance WebSocket JSON
-  -> BinanceDepthUpdateRaw
+  -> BinanceDepthUpdateMessage
   -> BinanceFieldMapper
   -> md::core::BookDelta
 ```

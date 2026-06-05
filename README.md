@@ -152,8 +152,8 @@ cmake --build build
 ## 路线图
 
 1. 稳定 `md-core` 事件模型、Lv3 订单级模型、参考数据模型和 replay 文件格式。
-2. 实现 raw 文件格式、mock/replay adapter 和一个 crypto adapter。
-3. 补 Binance Spot WebSocket live client，并把 raw writer 接入 gateway pipeline。
+2. 实现统一 message log、mock/replay adapter 和一个 crypto adapter。
+3. 补 Binance Spot WebSocket live client，并把 `MessageLogWriter` 接入 gateway pipeline。
 4. 增加 NATS 发布和 `md-client-nats`。
 5. 增加 CTP、IB 等 adapter，并通过平台/依赖开关隔离闭源 SDK。
 6. 实现 `md-runtime` 的 Linux 运行时能力：CPU 绑核、clock reader、memory lock、线程 profile。

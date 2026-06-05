@@ -1,6 +1,6 @@
 # Binance Spot Raw MVP
 
-本次先选 Binance Spot 做第一个 crypto raw 接入对象。原因是它的公开行情 WebSocket 比较直接，适合先验证 raw capture、文件格式和订阅模型。
+本次先选 Binance Spot 做第一个 crypto raw 接入对象。原因是它的公开行情 WebSocket 比较直接，适合先验证原始报文采集、统一 envelope、message log 和订阅模型。
 
 参考文档来自用户提供的 `crypto-api-docs` 仓库：
 
@@ -14,9 +14,9 @@
 
 ```text
 Binance WebSocket stream
-  -> RawEnvelope
+  -> MessageEnvelope(payload_kind = ProviderMessage)
   -> 原始 JSON payload
-  -> .mdfraw 文件
+  -> message log 文件
 ```
 
 当前已落地的代码：
@@ -24,7 +24,7 @@ Binance WebSocket stream
 - `libs/md-adapters/crypto/binance/include/md/adapters/crypto/binance/spot_streams.hpp`
 - `configs/dev/binance_spot_raw.yaml`
 - `tests/binance_spot_streams_smoke.cpp`
-- `tests/raw_file_smoke.cpp`
+- `tests/message_log_smoke.cpp`
 
 ## 支持的 stream 名称生成
 
@@ -84,8 +84,8 @@ wss://demo-stream.binance.com:9443/ws/<streamName>
 
 后续实现真实网络接入时，需要补三块：
 
-1. `md-transport` 或 adapter 内的 WebSocket client，负责 TLS、ping/pong、重连、订阅生命周期。
-2. `md-runtime` 的 SPSC ring buffer，避免网络回调被文件 IO 卡住。
-3. Binance Spot raw app 或 gateway pipeline，把 `SpotRawSubscription`、WebSocket 收包和 `RawWriter` 串起来。
+1. adapter 内的 WebSocket client，负责 TLS、ping/pong、重连、订阅生命周期。
+2. `md-runtime` 的 queue，让网络回调不要被文件 IO 卡住。
+3. gateway pipeline，把 `SpotSubscription`、WebSocket 收包和 `MessageLogWriter` 串起来。
 
 normalized mapper 先不做。等 raw 样本稳定后，再用这些样本实现 `Trade`、`Quote`、`BookDelta` 和后续 book builder。
