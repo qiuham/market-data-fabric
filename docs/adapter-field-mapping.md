@@ -64,7 +64,7 @@ CThostFtdcDepthMarketDataField
 
 不能在行情热路径上解释执行外部映射文件。
 
-生产 adapter 的字段转换应由 C++ mapper 实现，或者由构建期从外部文档项目生成 C++ 代码。运行时链路应该是：
+生产 adapter 的字段转换应由 C++ mapper 实现，或者由 `tools/md-codegen` 在构建期从外部文档项目生成 C++ 代码。运行时链路应该是：
 
 ```text
 外部报文 -> C++ decoder -> C++ field mapper -> md-core event

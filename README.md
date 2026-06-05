@@ -47,6 +47,7 @@ configs/                开发、生产和参考数据配置示例。
 docs/                   架构、部署、字段转换、高频准备度等文档。
 tests/                  单元、集成、回放、fuzz、benchmark 测试。
 scripts/                开发、CI、运维脚本。
+tools/                  构建期工具预留目录，例如 md-codegen。
 third_party/            明确需要随仓库管理的第三方依赖预留目录。
 ```
 
@@ -114,6 +115,18 @@ md-gateway -> broker/transport -> strategy + md-client
 
 如果消费者愿意直接使用 NATS/Kafka 原生客户端，也可以绕过 `md-client`，只依赖公开的 schema 和 topic 规范。
 
+## Codegen
+
+项目预留了构建期 codegen 位置：
+
+```text
+tools/md-codegen/
+docs/codegen.md
+cmake/MdfCodegen.cmake
+```
+
+codegen 只用于构建期生成 C++ 样板，不在行情热路径解释配置文件。供应商 API 文档由外部文档项目维护，本仓库后续只消费它产出的稳定 IR。
+
 ## 初始构建
 
 当前项目只是骨架。装好 CMake 后可以执行：
@@ -134,3 +147,4 @@ cmake --build build
 6. 增加共享内存传输和延迟 benchmark。
 7. 增加 `md-cluster` 的 lease/assignment 支持。
 8. 在 IDC 网络能力确认后，再增加 UDP 组播传输。
+9. 等第一个真实 adapter 和外部 API 文档 IR 稳定后，再实现 `tools/md-codegen`。
