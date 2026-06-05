@@ -1,9 +1,11 @@
-# Tests
+# tests 测试目录
 
-Planned test categories:
+这里放测试。
 
-- Unit tests for core events, refdata, mappers, book builders, and sequence checks.
-- Integration tests for adapter-to-transport pipelines.
-- Replay tests for deterministic strategy input.
-- Fuzz tests for decoders.
-- Benchmarks for latency and throughput.
+计划分类：
+
+- unit：核心类型、refdata、mapper、book builder、sequence checker 单元测试。
+- integration：adapter 到 transport 的集成测试。
+- replay：录制和回放一致性测试。
+- fuzz：decoder 和 parser fuzz 测试。
+- benchmark：延迟、吞吐、队列和序列化 benchmark。

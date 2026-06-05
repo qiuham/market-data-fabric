@@ -1,10 +1,13 @@
-# Binance Adapter
+# Binance 行情适配器
 
-Skeleton for Binance spot/futures WebSocket and REST snapshot handling.
+Binance 行情 adapter 骨架。
 
-Responsibilities:
+职责：
 
-- Connect to Binance endpoints.
-- Decode raw trade/depth messages.
-- Convert provider fields to `md-core` events.
-- Handle snapshot + delta alignment and sequence gaps.
+- 连接 Binance 行情 endpoint。
+- 解码 trade、depth、book snapshot 等原始消息。
+- 处理 snapshot + delta 对齐。
+- 检查 update id / sequence gap。
+- 将外部字段转换为 `md-core` 标准事件。
+
+字段映射示例放在 `schema/depth_update.mapping.yaml`。

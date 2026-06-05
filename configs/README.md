@@ -1,5 +1,11 @@
-# Configs
+# configs 配置目录
 
-Configuration examples for local development, production sources, and reference data.
+这里放配置示例。
 
-Do not commit secrets, vendor credentials, account passwords, broker auth codes, or production private endpoints.
+目录约定：
+
+- `dev/`：本地开发和 mock/replay 配置。
+- `prod/`：生产 source、adapter、transport 配置示例。
+- `refdata/`：品种、交易所、精度、symbol 映射、交易时段等参考数据。
+
+不要提交账号、密码、auth code、私有 endpoint、证书或任何生产敏感信息。

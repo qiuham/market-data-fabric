@@ -1,5 +1,13 @@
-# md-book
+# md-book 盘口模块
 
-Order book builders and validators.
+`md-book` 负责盘口构建和校验。
 
-Supports separate models for L1 quotes, finite-depth snapshots, market-by-price deltas, and future market-by-order feeds.
+需要支持多种盘口模型：
+
+- L1：最优买卖价。
+- 有限档快照：例如 5 档、10 档、20 档。
+- MBP：按价位聚合的增量盘口。
+- MBO：订单级盘口。
+- snapshot + delta 对齐和重建。
+
+不同市场的盘口语义差异很大，不能假设所有 source 都提供同一种 order book。

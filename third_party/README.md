@@ -1,5 +1,5 @@
-# Third Party
+# third_party 第三方依赖目录
 
-Reserved for explicitly vendored dependencies. Prefer package managers or system dependencies before committing binaries.
+这里预留需要随仓库管理的第三方依赖。
 
-Vendor SDK binaries and credentials should not be committed by default.
+默认优先使用系统包、包管理器或外部依赖路径。供应商 SDK 二进制、账号信息、证书和私有配置不应直接提交到仓库。

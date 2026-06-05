@@ -17,7 +17,7 @@ enum class AffinityResult : std::uint8_t {
 };
 
 // Implementations should be OS-specific. Linux can use pthread_setaffinity_np;
-// macOS development builds can return Unsupported without affecting md-core.
+// Non-Linux development builds can return Unsupported without affecting md-core.
 AffinityResult pin_current_thread(const CpuSetConfig& config) noexcept;
 
 } // namespace md::runtime

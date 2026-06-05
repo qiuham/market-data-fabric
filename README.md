@@ -1,47 +1,57 @@
-# Market Data Fabric
+# Market Data Fabric 行情数据平台
 
-`market-data-fabric` is a C++ market data platform skeleton for multi-market quantitative systems. It is designed around a clean core library, provider-specific adapters, pluggable transports, recorder/replay, and a consumer-side client library.
+`market-data-fabric` 是一个面向量化系统的 C++ 行情数据平台骨架，目标是把多市场、多供应商的行情接入统一成稳定的内部事件模型，并通过可插拔传输层分发给策略、记录器、回放服务和下游分析系统。
 
-The goal is to support crypto, China A-shares, US equities, and futures through multiple providers while keeping the core reusable for lower-latency or HFT-style pipelines.
+这个项目希望同时覆盖：
 
-## Design Goals
+- 加密货币行情：现货、合约、期权等。
+- A 股行情：券商柜台、行情供应商、Level-1/Level-2 等。
+- 美股行情：券商 API、第三方行情、交易所/授权数据源等。
+- 期货行情：CTP、易盛、柜台 SDK、交易所或供应商专线等。
 
-- Normalize many external feeds into one internal event model.
-- Keep `md-core` transport-agnostic and vendor-agnostic.
-- Let strategies consume live data, replay data, NATS, Kafka, shared memory, or future transports through one client abstraction.
-- Support distributed deployment through logical control-plane and data-plane separation.
-- Keep provider field conversion close to each adapter, not in the service layer.
-- Plan low-latency hooks such as CPU affinity, clock sources, preallocation, and hot-path isolation without forcing them into ordinary deployments.
-- Prefer Linux for production validation while allowing portable core development on macOS/Apple Silicon.
+核心设计原则是：行情接入、字段转换、分发方式、服务治理、消费端接口互相解耦。中频系统可以通过统一服务发布行情；未来低延迟或高频场景可以复用干净的核心库和部分解码/book 组件。
 
-## Repository Layout
+## 设计目标
+
+- 将不同外部行情源标准化为统一的内部事件模型。
+- 保持 `md-core` 不依赖任何供应商 SDK、消息队列、数据库或服务框架。
+- 将供应商字段转换放在各自 adapter 目录，避免污染服务层。
+- 支持 NATS、Kafka、共享内存、TCP、UDP 组播、文件等多种分发和落盘方式。
+- 通过 `md-client` 把策略消费行情的方式透明化，降低策略侧重复代码。
+- 通过 `md-cluster` 预留分布式部署能力，包括节点注册、租约、分片、主备切换和发布者 epoch。
+- 通过 `md-runtime` 提前规划 CPU 绑核、线程优先级、计时器、内存预分配等低延迟运行时能力。
+- 让普通中频部署和未来高频复用共用基础模型，但不让高频热路径依赖控制面或消息中间件。
+
+## 仓库结构
 
 ```text
 apps/
-  md-node/              Single binary entry point with role-based startup.
+  md-node/              统一进程入口，支持 gateway/controller 等角色。
 
 libs/
-  md-core/              HFT-reusable event types, IDs, timestamps, sequence checks, sinks.
-  md-refdata/           Instruments, venues, calendars, trading sessions, precision, symbol mapping.
-  md-book/              L1/L2/MBO book builders and validators.
-  md-codecs/            Shared protocol decoding helpers.
-  md-adapters/          Provider adapters and provider-specific field mappers.
-  md-transport/         Publisher/subscriber implementations: NATS, Kafka, shm, TCP, multicast, file.
-  md-service/           Gateway runtime, pipeline builder, lifecycle, health, metrics.
-  md-cluster/           Assignment, leases, failover, publisher epochs, node registry.
-  md-runtime/           CPU affinity, scheduler, clocks, memory profiles, low-latency hooks.
-  md-replay/            Raw and normalized recording plus replay readers.
-  md-client/            Consumer-side library for strategies and services.
+  md-core/              核心事件类型、ID、时间戳、序号、sink 接口。
+  md-refdata/           品种、交易所、资产类型、交易时段、精度、symbol 映射。
+  md-book/              L1/L2/MBO 盘口构建和校验。
+  md-codecs/            通用协议解析辅助工具。
+  md-adapters/          外部行情源 adapter 和供应商字段映射。
+  md-transport/         NATS、Kafka、共享内存、TCP、组播、文件等传输层。
+  md-service/           gateway 运行时、pipeline 构建、生命周期、健康检查、指标。
+  md-cluster/           分布式 assignment、lease、failover、publisher epoch、节点注册。
+  md-runtime/           CPU 绑核、调度策略、计时器、内存 profile、低延迟运行时钩子。
+  md-replay/            原始数据和标准化事件的录制与回放。
+  md-client/            策略和下游服务使用的消费端库。
 
-schemas/                Wire schemas for broker/file/shm payloads.
-configs/                Development, production, and reference-data examples.
-docs/                   Architecture and mapping notes.
-tests/                  Unit, integration, replay, fuzz, and benchmark tests.
+schemas/                网络传输、落盘、跨语言消费使用的消息 schema。
+configs/                开发、生产和参考数据配置示例。
+docs/                   架构、部署、字段映射、高频准备度等文档。
+tests/                  单元、集成、回放、fuzz、benchmark 测试。
+scripts/                开发、CI、运维脚本。
+third_party/            明确需要随仓库管理的第三方依赖预留目录。
 ```
 
-## Runtime Roles
+## 运行角色
 
-The intended runtime can follow a Kafka-like role model: code is separated by responsibility, but deployment can be combined or isolated.
+项目采用类似 Kafka 的角色模型：代码职责分层，但部署形态可以合并或拆分。
 
 ```text
 md-node --roles=gateway
@@ -49,12 +59,12 @@ md-node --roles=controller
 md-node --roles=gateway,controller
 ```
 
-Early deployments can run only static gateway configs. Later deployments can add leases and assignments through Kubernetes, etcd, Consul, or an optional controller role.
+早期可以只用静态 YAML 运行 gateway；后续可以接入 Kubernetes Lease、etcd、Consul，或者启用独立 controller 角色。无论控制面如何部署，实时行情 tick 都不应经过控制面。
 
-## Data Plane
+## 数据面链路
 
 ```text
-external feed / SDK
+外部行情源 / 供应商 SDK
   -> adapter client
   -> decoder
   -> provider field mapper
@@ -64,23 +74,23 @@ external feed / SDK
   -> NATS / Kafka / shm / TCP / multicast / file
 ```
 
-Market data ticks should not go through the control plane or a consensus path. Consensus/leases are only for low-frequency metadata such as ownership, assignment, config version, and failover.
+数据面只负责接收、解析、标准化、校验、构建盘口、发布和录制。它应该尽量简单、低抖动、少阻塞。
 
-## Control Plane
+## 控制面职责
 
-Logical control-plane state includes:
+逻辑控制面负责低频元数据，不负责每条行情：
 
-- Node registry and heartbeat.
-- Source and symbol assignment.
-- Primary/standby leases.
-- Publisher epoch for failover detection.
-- Config version and rollout state.
+- 节点注册和心跳。
+- source、symbol、shard 的 assignment。
+- 主备 lease 和故障切换。
+- publisher epoch，用于下游识别切主。
+- 配置版本和滚动发布状态。
 
-The first version can use static YAML. Production can later use Kubernetes Lease/CRD, etcd, Consul, or a dedicated controller role.
+第一版可以使用静态配置；规模上来后再接入外部协调系统或启用 controller 角色。
 
-## Adapter Field Mapping
+## Adapter 字段映射
 
-Provider-specific conversion lives next to each adapter:
+供应商字段转换放在 adapter 自己的目录，不放在 `md-service`：
 
 ```text
 libs/md-adapters/{asset_class}/{provider}/
@@ -90,19 +100,21 @@ libs/md-adapters/{asset_class}/{provider}/
   tests/*_field_mapper_test.cpp
 ```
 
-Standard fields are defined in `libs/md-core`. Reference-data context such as symbol mapping, price scale, quantity scale, calendars, and sessions belongs in `libs/md-refdata`.
+标准事件字段只在 `md-core` 定义。symbol、价格精度、数量精度、交易日、交易时段等上下文由 `md-refdata` 提供。
 
-## Consumer Library
+## 消费端库
 
-`md-client` is a consumer-side SDK. It does not package brokers or feed adapters. It wraps transport clients and schema decoding so strategies can use one interface for live data, replay, NATS, Kafka, or shared memory.
+`md-client` 是给策略和下游服务使用的消费端库。它不包含行情源 adapter，也不包含 NATS/Kafka broker 本身。它只是封装传输客户端、schema 解码、topic/subject 规则、事件回调、回放/live 切换等逻辑。
 
 ```text
 md-gateway -> broker/transport -> strategy + md-client
 ```
 
-Consumers can also bypass `md-client` and use native NATS/Kafka clients directly with the published schemas.
+如果消费者愿意直接使用 NATS/Kafka 原生客户端，也可以绕过 `md-client`，只依赖公开的 schema 和 topic 规范。
 
-## Initial Build
+## 初始构建
+
+当前项目只是骨架。装好 CMake 后可以执行：
 
 ```bash
 cmake -S . -B build
@@ -110,13 +122,13 @@ cmake --build build
 ./build/md-node --roles=gateway --config configs/dev/mock.yaml
 ```
 
-## Roadmap
+## 路线图
 
-1. Stabilize `md-core` events, reference data, and replay file format.
-2. Implement mock/replay adapters and one crypto adapter.
-3. Add NATS publishing and consumer-side `md-client-nats`.
-4. Add CTP and IB adapters behind platform-specific build flags.
-5. Add `md-runtime` Linux implementations for CPU affinity, clock readers, memory locking, and thread profiles.
-6. Add shared-memory transport and latency benchmarks.
-7. Add lease/assignment support through `md-cluster`.
-8. Add UDP multicast only after IDC/network capability is confirmed.
+1. 稳定 `md-core` 事件模型、参考数据模型和 replay 文件格式。
+2. 实现 mock/replay adapter 和一个 crypto adapter。
+3. 增加 NATS 发布和 `md-client-nats`。
+4. 增加 CTP、IB 等 adapter，并通过平台/依赖开关隔离闭源 SDK。
+5. 实现 `md-runtime` 的 Linux 运行时能力：CPU 绑核、clock reader、memory lock、线程 profile。
+6. 增加共享内存传输和延迟 benchmark。
+7. 增加 `md-cluster` 的 lease/assignment 支持。
+8. 在 IDC 网络能力确认后，再增加 UDP 组播传输。

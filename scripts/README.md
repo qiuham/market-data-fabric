@@ -1,3 +1,10 @@
-# Scripts
+# scripts 脚本目录
 
-Development, CI, and operations helper scripts.
+这里放开发、CI、运维辅助脚本。
+
+示例：
+
+- 本地构建脚本。
+- 格式化和静态检查脚本。
+- CI 辅助脚本。
+- 部署和健康检查脚本。
