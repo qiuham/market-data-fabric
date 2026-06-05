@@ -34,7 +34,7 @@ libs/
   md-refdata/           品种、交易所、资产类型、交易时段、精度、symbol 映射。
   md-book/              L1/L2/L3 MBO 盘口构建和校验。
   md-codecs/            通用协议解析辅助工具。
-  md-adapters/          外部行情源 adapter 和供应商字段映射。
+  md-adapters/          外部行情源 adapter 和供应商字段转换。
   md-transport/         NATS、Kafka、共享内存、TCP、组播、文件等传输层。
   md-service/           gateway 运行时、pipeline 构建、生命周期、健康检查、指标。
   md-cluster/           分布式 assignment、lease、failover、publisher epoch、节点注册。
@@ -44,7 +44,7 @@ libs/
 
 schemas/                网络传输、落盘、跨语言消费使用的消息 schema。
 configs/                开发、生产和参考数据配置示例。
-docs/                   架构、部署、字段映射、高频准备度等文档。
+docs/                   架构、部署、字段转换、高频准备度等文档。
 tests/                  单元、集成、回放、fuzz、benchmark 测试。
 scripts/                开发、CI、运维脚本。
 third_party/            明确需要随仓库管理的第三方依赖预留目录。
@@ -89,19 +89,20 @@ md-node --roles=gateway,controller
 
 第一版可以使用静态配置；规模上来后再接入外部协调系统或启用 controller 角色。
 
-## Adapter 字段映射
+## Adapter 字段转换
 
 供应商字段转换放在 adapter 自己的目录，不放在 `md-service`：
 
 ```text
 libs/md-adapters/{asset_class}/{provider}/
   src/*_field_mapper.cpp
-  mapping/*.yaml
+  src/*_normalizer.cpp
   docs/field_mapping.md
   tests/*_field_mapper_test.cpp
+  fixtures/
 ```
 
-标准事件字段只在 `md-core` 定义。symbol、价格精度、数量精度、交易日、交易时段等上下文由 `md-refdata` 提供。Lv3 事件使用 `OrderEvent` 和 `Execution`，不允许 adapter 用 L2 聚合盘口伪造订单级数据。
+供应商 API 文档由外部文档项目维护。本仓库不维护手写 mapping YAML，字段转换以 C++ mapper 和 tests 为准。标准事件字段只在 `md-core` 定义。symbol、价格精度、数量精度、交易日、交易时段等上下文由 `md-refdata` 提供。Lv3 事件使用 `OrderEvent` 和 `Execution`，不允许 adapter 用 L2 聚合盘口伪造订单级数据。
 
 ## 消费端库
 
