@@ -26,6 +26,14 @@ target_link_libraries(md-book INTERFACE md-core)
 add_library(md-runtime INTERFACE)
 target_include_directories(md-runtime INTERFACE libs/md-runtime/include)
 
+add_library(md-replay INTERFACE)
+target_include_directories(md-replay INTERFACE libs/md-replay/include)
+target_link_libraries(md-replay INTERFACE md-core)
+
+add_library(md-adapters-binance INTERFACE)
+target_include_directories(md-adapters-binance INTERFACE libs/md-adapters/crypto/binance/include)
+target_link_libraries(md-adapters-binance INTERFACE md-core)
+
 add_library(md-client-core INTERFACE)
 target_include_directories(md-client-core INTERFACE libs/md-client/core/include)
 target_link_libraries(md-client-core INTERFACE md-core)
@@ -33,4 +41,16 @@ target_link_libraries(md-client-core INTERFACE md-core)
 if (MDF_BUILD_APPS)
   add_executable(md-node apps/md-node/src/main.cpp)
   target_link_libraries(md-node PRIVATE md-core md-refdata md-book md-runtime md-client-core)
+endif()
+
+if (MDF_BUILD_TESTS)
+  enable_testing()
+
+  add_executable(mdf-raw-file-smoke tests/raw_file_smoke.cpp)
+  target_link_libraries(mdf-raw-file-smoke PRIVATE md-core md-replay md-adapters-binance)
+  add_test(NAME raw_file_smoke COMMAND mdf-raw-file-smoke)
+
+  add_executable(mdf-binance-spot-streams-smoke tests/binance_spot_streams_smoke.cpp)
+  target_link_libraries(mdf-binance-spot-streams-smoke PRIVATE md-adapters-binance)
+  add_test(NAME binance_spot_streams_smoke COMMAND mdf-binance-spot-streams-smoke)
 endif()

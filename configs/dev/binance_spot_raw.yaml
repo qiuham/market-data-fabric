@@ -1,0 +1,29 @@
+pipeline:
+  mode: raw_only
+
+adapter:
+  market: crypto
+  provider: binance
+  venue: spot
+  environment: market_data_only
+  connection_mode: single_stream
+  symbols:
+    - BTCUSDT
+    - ETHUSDT
+  streams:
+    - trade
+    - bookTicker
+    - depth@100ms
+
+raw_data:
+  enabled: true
+  record: true
+  publish: false
+  format: provider_native
+  path: ./data/raw/binance_spot
+  storage:
+    max_total_bytes: 104857600
+    limit_policy: stop_recording
+
+normalization:
+  enabled: false

@@ -1,11 +1,10 @@
 # tests 测试目录
 
-这里放测试。
+测试目录用于放单元测试、集成测试、回放测试、fuzz 和 benchmark。
 
-计划分类：
+当前已有 smoke test：
 
-- unit：核心类型、refdata、mapper、book builder、sequence checker 单元测试。
-- integration：adapter 到 transport 的集成测试。
-- replay：录制和回放一致性测试。
-- fuzz：decoder 和 parser fuzz 测试。
-- benchmark：延迟、吞吐、队列和序列化 benchmark。
+- `raw_file_smoke.cpp`：验证 raw 文件写入、100 MiB 风格容量限制和读取。
+- `binance_spot_streams_smoke.cpp`：验证 Binance Spot stream 名称、URL 和 raw envelope 生成。
+
+装好 CMake 后可以通过 `ctest` 运行。当前环境没有 CMake 时，也可以用 `c++ -std=c++20` 手动编译这些 smoke test。

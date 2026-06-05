@@ -88,7 +88,7 @@ normalized_only  只输出标准化事件，不额外保留原始数据。
 dual             同时保留 raw 数据和标准化事件，长期生产更推荐。
 ```
 
-详见 `docs/data-modes.md`。
+详见 `docs/data-modes.md` 和 `docs/raw-capture.md`。
 
 ## 控制面职责
 
@@ -152,11 +152,12 @@ cmake --build build
 ## 路线图
 
 1. 稳定 `md-core` 事件模型、Lv3 订单级模型、参考数据模型和 replay 文件格式。
-2. 实现 mock/replay adapter 和一个 crypto adapter。
-3. 增加 NATS 发布和 `md-client-nats`。
-4. 增加 CTP、IB 等 adapter，并通过平台/依赖开关隔离闭源 SDK。
-5. 实现 `md-runtime` 的 Linux 运行时能力：CPU 绑核、clock reader、memory lock、线程 profile。
-6. 增加共享内存传输和延迟 benchmark。
-7. 增加 `md-cluster` 的 lease/assignment 支持。
-8. 在 IDC 网络能力确认后，再增加 UDP 组播传输。
-9. 等第一个真实 adapter 和外部 API 文档 IR 稳定后，再实现 `tools/md-codegen`。
+2. 实现 raw 文件格式、mock/replay adapter 和一个 crypto adapter。
+3. 补 Binance Spot WebSocket live client，并把 raw writer 接入 gateway pipeline。
+4. 增加 NATS 发布和 `md-client-nats`。
+5. 增加 CTP、IB 等 adapter，并通过平台/依赖开关隔离闭源 SDK。
+6. 实现 `md-runtime` 的 Linux 运行时能力：CPU 绑核、clock reader、memory lock、线程 profile。
+7. 增加共享内存传输和延迟 benchmark。
+8. 增加 `md-cluster` 的 lease/assignment 支持。
+9. 在 IDC 网络能力确认后，再增加 UDP 组播传输。
+10. 等第一个真实 adapter 和外部 API 文档 IR 稳定后，再实现 `tools/md-codegen`。

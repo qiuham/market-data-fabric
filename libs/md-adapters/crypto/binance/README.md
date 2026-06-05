@@ -1,12 +1,21 @@
 # Binance 行情适配器
 
-Binance 行情 adapter 骨架。
+Binance 行情 adapter 当前先实现 Spot raw MVP 的基础能力。
 
-职责：
+已落地：
+
+- Spot stream 名称生成：`trade`、`aggTrade`、`bookTicker`、`depth`、`depth@100ms`、`depth5/10/20`。
+- Spot WebSocket URL 生成：生产、market-data-only、testnet、demo 环境。
+- raw envelope 模板：不解析 payload，只用连接和订阅层已知的信息填 `source_id`、`connection_id`、`stream_id`、`capture_seq`、`recv_ts_ns`。
+
+后续职责：
 
 - 连接 Binance 行情 endpoint。
-- 解码 trade、depth、book snapshot 等原始消息。
+- 处理 WebSocket ping/pong、重连、订阅生命周期。
+- 在 raw_only 模式下录制原始 JSON/SBE payload。
+- 在 normalized 模式下解码 trade、depth、book ticker 等原始消息。
 - 处理 snapshot + delta 对齐。
 - 检查 update id / sequence gap。
 - 将外部字段转换为 `md-core` 标准事件。
 
+注意：如果 Binance 只提供聚合深度，就只能输出 L2 MBP，不允许伪造成 Lv3 MBO。

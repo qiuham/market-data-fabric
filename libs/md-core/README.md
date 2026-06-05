@@ -6,6 +6,7 @@
 
 - 标准事件结构：`Trade`、`Quote`、`BookDelta`、`BookSnapshot`、`OrderEvent`、`Execution`、`Status`。
 - 标准 header：schema version、source id、venue id、instrument id、stream id、序号、时间戳、flags。
+- raw envelope：原始报文采集所需的轻量元数据，不解析 payload。
 - 价格和数量的 fixed-point 表达。
 - Lv3 订单级事件模型。
 - sink / callback 基础接口。
