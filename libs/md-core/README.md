@@ -6,7 +6,8 @@
 
 - 统一 message envelope：raw/provider message 和 normalized event 共用外层字段。
 - 标准事件结构：`Trade`、`Quote`、`BookDelta`、`BookSnapshot`、`OrderEvent`、`Execution`、`Status`。
-- 标准 header：schema version、source id、venue id、instrument id、stream id、序号、时间戳、flags。
+- 标准 header：schema version、source id、venue id、instrument id、feed id、序号、时间戳、flags。
+- 统一 feed 描述：`FeedSpec`、`ResolvedFeed`、`FeedConnectionSpec` 和 provider message callback view。
 - 价格和数量的 fixed-point 表达。
 - Lv3 订单级事件模型。
 - sink / callback 基础接口。

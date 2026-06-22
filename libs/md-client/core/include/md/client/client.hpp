@@ -17,7 +17,7 @@ enum class EventMask : unsigned {
     Execution = 1u << 5,
 };
 
-struct Subscription {
+struct FeedRequest {
     std::string source;
     std::string symbol;
     unsigned events{};
@@ -32,7 +32,7 @@ struct ClientConfig {
 class MarketDataClient {
 public:
     virtual ~MarketDataClient() = default;
-    virtual void subscribe(const Subscription& subscription) = 0;
+    virtual void request_feed(const FeedRequest& request) = 0;
     virtual void on_trade(std::function<void(const md::core::Trade&)> handler) = 0;
     virtual void on_order_event(std::function<void(const md::core::OrderEvent&)> handler) = 0;
     virtual void on_execution(std::function<void(const md::core::Execution&)> handler) = 0;

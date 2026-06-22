@@ -6,11 +6,11 @@ adapter:
   provider: binance
   venue: spot
   environment: market_data_only
-  connection_mode: single_stream
+  connection_mode: single_feed
   symbols:
     - BTCUSDT
     - ETHUSDT
-  streams:
+  feeds:
     - trade
     - bookTicker
     - depth@100ms

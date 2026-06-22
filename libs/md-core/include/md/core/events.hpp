@@ -116,7 +116,7 @@ struct OrderEvent {
                   .payload_encoding = PayloadEncoding::MdStruct};
   std::uint64_t order_id{};
   std::uint64_t original_order_id{};
-  std::uint64_t channel_id{};
+  std::uint64_t partition_id{};
   std::uint64_t order_seq{};
   std::uint64_t priority_id{};
   std::int64_t price{};
@@ -135,7 +135,7 @@ struct Execution {
   MdHeader header{.payload_kind = PayloadKind::Execution,
                   .payload_encoding = PayloadEncoding::MdStruct};
   std::uint64_t trade_id{};
-  std::uint64_t channel_id{};
+  std::uint64_t partition_id{};
   std::uint64_t execution_seq{};
   std::uint64_t buy_order_id{};
   std::uint64_t sell_order_id{};

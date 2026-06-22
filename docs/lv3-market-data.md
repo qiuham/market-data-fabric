@@ -25,7 +25,7 @@ Lv3 统一使用两个核心事件：
 
 - `order_id`：当前委托编号。
 - `original_order_id`：替换或修改前的委托编号。
-- `channel_id`：交易所通道或分区。
+- `partition_id`：交易所分区或业务分片。
 - `order_seq`：委托业务序号。
 - `priority_id`：时间优先级或队列优先级。
 - `price`：fixed-point 价格。
@@ -86,7 +86,7 @@ book_model: L3Mbo
 - 订单新增、修改、撤单、删除、替换。
 - 成交对剩余数量的影响。
 - 同价位时间优先级。
-- channel/partition 序号检查。
+- partition 序号检查。
 - snapshot 和增量恢复。
 - 交易阶段切换。
 

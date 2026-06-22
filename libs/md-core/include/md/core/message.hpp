@@ -55,7 +55,7 @@ enum class Compression : std::uint8_t {
 enum class MessageFlag : std::uint32_t {
   None = 0,
   ProviderTimestampUnknown = 1u << 0,
-  StreamKnownWithoutParsing = 1u << 1,
+  FeedKnownWithoutParsing = 1u << 1,
   PayloadMayContainMultipleEvents = 1u << 2,
   BinaryPayload = 1u << 3,
 };
@@ -77,7 +77,7 @@ struct MessageEnvelope {
   std::uint32_t source_id{};
   std::uint32_t venue_id{};
   std::uint32_t connection_id{};
-  std::uint32_t stream_id{};
+  std::uint32_t feed_id{};
   std::uint32_t instrument_id{};
   std::uint64_t capture_seq{};
   std::uint64_t event_seq{};

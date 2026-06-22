@@ -35,13 +35,13 @@ raw 模式不需要先知道 `instrument_id`、价格精度、数量精度，也
 - `payload_encoding`：JSON、二进制、SBE 等。
 - `source_id`：数据源，例如 Binance Spot。
 - `connection_id`：本进程内的连接编号。
-- `stream_id`：如果连接或订阅层已经知道 stream，就写入；否则为 0。
+- `feed_id`：如果连接或订阅层已经知道行情 feed，就写入；否则为 0。
 - `capture_seq`：本地采集递增序号。
 - `recv_ts_ns`：本机收到消息时的时间戳。
 - `protocol`：WebSocket、TCP、UDP、SDK 等。
 - `compression`：是否压缩。
 - `payload_size`：payload 字节数。
-- `flags`：一些轻量标记，例如 stream 是否不用解析 payload 就已知。
+- `flags`：一些轻量标记，例如 feed 是否不用解析 payload 就已知。
 
 raw 阶段不知道的字段保持 0，例如 `instrument_id`、`source_ts_ns`、`exchange_seq`。不要为了填这些字段去解析 payload。
 

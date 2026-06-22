@@ -55,7 +55,7 @@ struct MessageLogFrameHeader {
   std::uint32_t source_id{};
   std::uint32_t venue_id{};
   std::uint32_t connection_id{};
-  std::uint32_t stream_id{};
+  std::uint32_t feed_id{};
   std::uint32_t instrument_id{};
   std::uint64_t capture_seq{};
   std::uint64_t event_seq{};
@@ -111,7 +111,7 @@ make_message_log_frame_header(const md::core::MessageEnvelope &envelope,
   header.source_id = envelope.source_id;
   header.venue_id = envelope.venue_id;
   header.connection_id = envelope.connection_id;
-  header.stream_id = envelope.stream_id;
+  header.feed_id = envelope.feed_id;
   header.instrument_id = envelope.instrument_id;
   header.capture_seq = envelope.capture_seq;
   header.event_seq = envelope.event_seq;
@@ -136,7 +136,7 @@ to_message_envelope(const MessageLogFrameHeader &header) noexcept {
   envelope.source_id = header.source_id;
   envelope.venue_id = header.venue_id;
   envelope.connection_id = header.connection_id;
-  envelope.stream_id = header.stream_id;
+  envelope.feed_id = header.feed_id;
   envelope.instrument_id = header.instrument_id;
   envelope.capture_seq = header.capture_seq;
   envelope.event_seq = header.event_seq;

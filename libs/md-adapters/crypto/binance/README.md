@@ -4,13 +4,15 @@ Binance 行情 adapter 当前先实现 Spot raw MVP 的基础能力。raw 只表
 
 已落地：
 
-- Spot stream 名称生成：`trade`、`aggTrade`、`bookTicker`、`depth`、`depth@100ms`、`depth5/10/20`。
-- Spot WebSocket URL 生成：生产、market-data-only、testnet、demo 环境。
-- `MessageEnvelope` 模板：不解析 payload，只用连接和订阅层已知的信息填 `source_id`、`connection_id`、`stream_id`、`capture_seq`、`recv_ts_ns`。
+- `BinanceFeedSpec -> ResolvedFeed -> FeedConnectionSpec`：启动时生成 provider feed key、endpoint 和 `feed_id`。
+- Spot feed key 生成：`trade`、`aggTrade`、`bookTicker`、全市场 `!bookTicker`、`depth`、`depth@100ms`、`depth5/10/20`。
+- WebSocket URL 生成：Spot 生产、market-data-only、testnet、demo 环境，并预留 Binance 衍生品 endpoint。
+- `MessageEnvelope` 模板：不解析 payload，只用连接和订阅层已知的信息填 `source_id`、`connection_id`、`feed_id`、`capture_seq`、`recv_ts_ns`。
+- `BinanceFeedClient` 最小 live client：基于 `md-net` 的 Boost.Beast backend 接收原始 payload，并通过 `string_view` callback 暴露，不做 JSON 解析或标准化转换。
+- 多 symbol spec 会生成 Binance combined endpoint；当前 raw client 不解析 wrapper，combined 消息先按 connection 级 envelope 输出。
 
 后续职责：
 
-- 连接 Binance 行情 endpoint。
 - 处理 WebSocket ping/pong、重连、订阅生命周期。
 - 在 raw_only 模式下录制原始 JSON/SBE payload。
 - 在 normalized 模式下解码 trade、depth、book ticker 等原始消息。

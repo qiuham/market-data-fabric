@@ -1,4 +1,4 @@
-#include "md/adapters/crypto/binance/spot_streams.hpp"
+#include "md/adapters/crypto/binance/feeds.hpp"
 #include "md/replay/message_log.hpp"
 
 #include <cassert>
@@ -15,13 +15,17 @@ int main() {
       std::filesystem::temp_directory_path() /
       ("mdf_message_log_smoke_" + std::to_string(unique) + ".mdfmsg");
 
-  const auto subscription = binance::make_spot_subscription(
-      "BTCUSDT", binance::SpotStreamKind::Trade, 1,
-      binance::SpotEnvironment::MarketDataOnly);
+  binance::BinanceFeedSpec spec{};
+  spec.market = md::core::MarketSegment::Spot;
+  spec.symbols = {"BTCUSDT"};
+  spec.kind = md::core::FeedKind::Trade;
+  const auto connection = binance::make_connection_spec(
+      1, binance::BinanceEnvironment::MarketDataOnly, spec);
+  const auto &feed = connection.feeds.front();
   const std::string payload = R"({"e":"trade","s":"BTCUSDT"})";
 
   md::replay::MessageLogWriterOptions options{};
-  options.source_id = subscription.source_id;
+  options.source_id = connection.source_id;
   options.writer_id = 7;
   options.max_total_bytes = sizeof(md::replay::MessageLogFileHeader) +
                             sizeof(md::replay::MessageLogFrameHeader) +
@@ -32,7 +36,7 @@ int main() {
   assert(writer.open(path, options) ==
          md::replay::MessageLogAppendStatus::Written);
 
-  auto envelope = binance::make_spot_envelope(subscription, 1, 123456789);
+  auto envelope = md::core::make_feed_envelope(connection, feed, 1, 123456789);
   auto first = writer.append(envelope, payload);
   assert(first.status == md::replay::MessageLogAppendStatus::Written);
   assert(first.frames_written == 1);
@@ -45,7 +49,7 @@ int main() {
 
   md::replay::MessageLogReader reader{};
   assert(reader.open(path) == md::replay::MessageLogReadStatus::Ok);
-  assert(reader.file_header().source_id == subscription.source_id);
+  assert(reader.file_header().source_id == connection.source_id);
   assert(reader.file_header().writer_id == 7);
 
   md::replay::MessageLogRecord record{};
@@ -53,9 +57,9 @@ int main() {
   const auto stored = record.envelope();
   assert(stored.payload_kind == md::core::PayloadKind::ProviderMessage);
   assert(stored.payload_encoding == md::core::PayloadEncoding::ProviderJson);
-  assert(stored.source_id == subscription.source_id);
+  assert(stored.source_id == connection.source_id);
   assert(stored.connection_id == 1);
-  assert(stored.stream_id == subscription.stream_id);
+  assert(stored.feed_id == feed.feed_id);
   assert(stored.capture_seq == 1);
   assert(stored.payload_size == payload.size());
   assert(record.payload_as_string() == payload);
