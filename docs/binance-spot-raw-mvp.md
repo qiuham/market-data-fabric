@@ -86,7 +86,7 @@ FeedSpec(symbols=[BTCUSDT], Trade)
 
 `symbols=[]`、`symbols=[ALL]` 或 `symbols=[*]` 表示全量市场。adapter 会优先映射到供应商本身的聚合 feed；如果该 feed 类型没有供应商聚合能力，就需要先从 universe 展开成具体 symbols。
 
-`symbols=[BTCUSDT,ETHUSDT]` 会生成 combined endpoint。当前 raw client 不解析 combined wrapper，所以 envelope 先只保证 `connection_id` 正确；只有 single feed 或供应商聚合 feed 能在不读 payload 的情况下填 `feed_id`。
+`symbols=[BTCUSDT,ETHUSDT]` 会生成 combined endpoint。当前 live client 不解析 combined wrapper，所以 envelope 先只保证 `connection_id` 正确；只有 single feed 或供应商聚合 feed 能在不读 payload 的情况下填 `feed_id`。
 
 OKX/Bybit/Coinbase 这类后续通过固定 endpoint + startup message 的交易所，也会落到同一个 `FeedConnectionSpec`。
 

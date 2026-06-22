@@ -1,6 +1,6 @@
 # Binance 行情适配器
 
-Binance 行情 adapter 当前先实现 Spot raw MVP 的基础能力。raw 只表示 payload 是供应商原始报文，外层仍使用统一 `MessageEnvelope`。
+Binance 行情 adapter 当前先实现 Spot provider-message MVP 的基础能力：payload 保留供应商原始报文，外层使用统一 `MessageEnvelope`。
 
 已落地：
 
@@ -9,7 +9,7 @@ Binance 行情 adapter 当前先实现 Spot raw MVP 的基础能力。raw 只表
 - WebSocket URL 生成：Spot 生产、market-data-only、testnet、demo 环境，并预留 Binance 衍生品 endpoint。
 - `MessageEnvelope` 模板：不解析 payload，只用连接和订阅层已知的信息填 `source_id`、`connection_id`、`feed_id`、`capture_seq`、`recv_ts_ns`。
 - `BinanceFeedClient` 最小 live client：基于 `md-net` 的 Boost.Beast backend 接收原始 payload，并通过 `string_view` callback 暴露，不做 JSON 解析或标准化转换。
-- 多 symbol spec 会生成 Binance combined endpoint；当前 raw client 不解析 wrapper，combined 消息先按 connection 级 envelope 输出。
+- 多 symbol spec 会生成 Binance combined endpoint；当前 live client 不解析 wrapper，combined 消息先按 connection 级 envelope 输出。
 
 后续职责：
 

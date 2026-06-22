@@ -157,8 +157,12 @@ public:
     }
 
     transport.expires_never();
-    connection.set_option(
-        websocket::stream_base::timeout::suggested(beast_ns::role_type::client));
+    auto timeout =
+        websocket::stream_base::timeout::suggested(beast_ns::role_type::client);
+    timeout.handshake_timeout = options_.handshake_timeout;
+    timeout.idle_timeout = options_.idle_timeout;
+    timeout.keep_alive_pings = options_.keep_alive_pings;
+    connection.set_option(timeout);
     connection.set_option(websocket::stream_base::decorator(
         [](websocket::request_type &request) {
           request.set(boost::beast::http::field::user_agent,

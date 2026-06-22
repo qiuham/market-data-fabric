@@ -20,7 +20,7 @@ libs/md-adapters/{asset_class}/{provider}/
   tests/
     *_field_mapper_test.cpp
   fixtures/
-    raw/
+    provider_messages/
     normalized/
 ```
 

@@ -21,9 +21,11 @@ struct WebSocketEndpoint {
 struct WebSocketClientOptions {
   bool tcp_no_delay{true};
   bool verify_peer{true};
+  bool keep_alive_pings{true};
   std::size_t max_message_bytes{kDefaultWsMessageBytes};
   std::chrono::milliseconds connect_timeout{std::chrono::seconds(10)};
   std::chrono::milliseconds handshake_timeout{std::chrono::seconds(10)};
+  std::chrono::milliseconds idle_timeout{std::chrono::seconds(30)};
 };
 
 struct WebSocketMessageView {

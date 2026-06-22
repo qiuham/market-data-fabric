@@ -4,7 +4,7 @@
 
 后续可以放：
 
-- `raw.hpp.in`
+- `provider_message.hpp.in`
 - `mapper.generated.hpp.in`
 - `mapper.generated.cpp.in`
 - `mapper_test.cpp.in`
