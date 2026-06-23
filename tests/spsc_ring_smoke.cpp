@@ -22,14 +22,14 @@ int main() {
   }
   assert(numbers.empty());
 
-  md::runtime::SpscRing<md::core::ProviderMessageFrame<256>, 16> frames{};
-  md::core::ProviderMessageFrame<256> frame{};
-  frame.envelope.payload_kind = md::core::PayloadKind::ProviderMessage;
+  md::runtime::SpscRing<md::core::RawProviderMessageFrame<256>, 16> frames{};
+  md::core::RawProviderMessageFrame<256> frame{};
+  frame.envelope.payload_kind = md::core::PayloadKind::RawProviderMessage;
   frame.envelope.payload_encoding = md::core::PayloadEncoding::ProviderJson;
   assert(md::core::assign_payload(frame, std::string_view{"hello"}));
   assert(frames.try_push(frame));
 
-  md::core::ProviderMessageFrame<256> popped{};
+  md::core::RawProviderMessageFrame<256> popped{};
   assert(frames.try_pop(popped));
   assert(popped.envelope.payload_size == 5);
   assert(popped.payload.text_view() == "hello");

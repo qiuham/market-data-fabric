@@ -29,7 +29,7 @@ int main() {
   binance::BinanceFeedSpec depth_spec{};
   depth_spec.market = md::core::MarketSegment::Spot;
   depth_spec.symbols = {"ETHUSDT"};
-  depth_spec.kind = md::core::FeedKind::BookDelta;
+  depth_spec.kind = md::core::FeedKind::BookUpdate;
   depth_spec.speed = md::core::FeedSpeed::Ms100;
   const auto depth = binance::resolve_feed(depth_spec);
   assert(depth.provider_feed_key == "ethusdt@depth@100ms");
@@ -96,7 +96,7 @@ int main() {
 
   const auto envelope = md::core::make_feed_envelope(
       single_connection, single_connection.feeds[0], 9, 123);
-  assert(envelope.payload_kind == md::core::PayloadKind::ProviderMessage);
+  assert(envelope.payload_kind == md::core::PayloadKind::RawProviderMessage);
   assert(envelope.payload_encoding == md::core::PayloadEncoding::ProviderJson);
   assert(envelope.source_id == binance::kBinanceSourceId);
   assert(envelope.connection_id == 42);

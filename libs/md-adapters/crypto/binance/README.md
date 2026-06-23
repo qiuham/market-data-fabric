@@ -1,6 +1,6 @@
 # Binance 行情适配器
 
-Binance 行情 adapter 当前先实现 Spot provider-message MVP 的基础能力：payload 保留供应商原始报文，外层使用统一 `MessageEnvelope`。
+Binance 行情 adapter 当前先实现 Spot raw-provider-message MVP 的基础能力：payload 保留供应商原始报文，外层使用统一 `MessageEnvelope`。
 
 已落地：
 
@@ -14,7 +14,6 @@ Binance 行情 adapter 当前先实现 Spot provider-message MVP 的基础能力
 后续职责：
 
 - 处理 WebSocket ping/pong、重连、订阅生命周期。
-- 在 raw_only 模式下录制原始 JSON/SBE payload。
 - 在 normalized 模式下解码 trade、depth、book ticker 等原始消息。
 - 处理 snapshot + delta 对齐。
 - 检查 update id / sequence gap。

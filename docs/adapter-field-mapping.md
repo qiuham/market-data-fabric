@@ -28,7 +28,7 @@ libs/md-adapters/{asset_class}/{provider}/
 
 ```text
 vendor bytes / SDK callback
-  -> provider message type
+  -> raw provider message type
   -> provider field mapper
   -> md::core event
 ```
@@ -39,7 +39,7 @@ vendor bytes / SDK callback
 Binance WebSocket JSON
   -> BinanceDepthUpdateMessage
   -> BinanceFieldMapper
-  -> md::core::BookDelta
+  -> md::core::BookUpdate
 ```
 
 ```text
@@ -89,6 +89,11 @@ CThostFtdcDepthMarketDataField
 
 服务层可以创建上下文，但不应该理解供应商字段细节。
 
+## 统一语义
+
+- `Trade.aggressor_side` 表示主动方 / taker 方向；如果供应商给的是 maker side，mapper 必须反转。
+- `BookUpdate` 表示一条 L2 聚合盘口消息内的批量价位变更，序号、prevSeqId 和 checksum 放在 message scope，不拆成多条丢失上下文的单价位事件。
+
 ## Lv3 转换要求
 
 如果数据源提供订单级事件，应转换为：
@@ -96,7 +101,7 @@ CThostFtdcDepthMarketDataField
 - `OrderEvent`：逐笔委托、order add/modify/cancel/delete/replace。
 - `Execution`：逐笔成交、order executed、trade match。
 
-如果数据源只提供价位聚合盘口，只能转换为 `BookDelta` 或 `BookSnapshot`，不能伪造 `OrderEvent`。
+如果数据源只提供价位聚合盘口，只能转换为 `BookUpdate` 或 `BookSnapshot`，不能伪造 `OrderEvent`。
 
 ## 不要集中放 mapper
 

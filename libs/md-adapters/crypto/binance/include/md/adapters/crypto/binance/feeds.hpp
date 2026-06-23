@@ -108,7 +108,7 @@ inline std::string make_provider_feed_key(const BinanceFeedSpec &spec,
   case md::core::FeedKind::TopOfBook:
     key += "@bookTicker";
     break;
-  case md::core::FeedKind::BookDelta:
+  case md::core::FeedKind::BookUpdate:
     key += "@depth";
     key += speed_suffix(spec.speed);
     break;

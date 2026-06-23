@@ -77,7 +77,7 @@ book_model: L2Mbp
 book_model: L3Mbo
 ```
 
-如果外部 feed 只提供 L2 聚合盘口，adapter 只能输出 `BookDelta` 或 `BookSnapshot`。不能拆分聚合数量来伪造订单级委托。
+如果外部 feed 只提供 L2 聚合盘口，adapter 只能输出 `BookUpdate` 或 `BookSnapshot`。不能拆分聚合数量来伪造订单级委托。
 
 ## MBO Book
 
@@ -95,5 +95,5 @@ book_model: L3Mbo
 `md-client` 增加 `Order` 和 `Execution` 事件订阅能力。策略可以选择：
 
 - 中频：只消费 `Trade`、`Quote`、`BookSnapshot`。
-- 低延迟：消费 `BookDelta`。
+- 低延迟：消费 `BookUpdate`。
 - Lv3/HFT：消费 `OrderEvent`、`Execution`，自行或通过 `MboBook` 构建订单簿。

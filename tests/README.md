@@ -1,12 +1,17 @@
-# tests 测试目录
+# tests
 
-测试目录用于放单元测试、集成测试、回放测试、fuzz 和 benchmark。
+测试目录用于放单元测试、集成测试、fuzz 和 benchmark。
 
-当前已有 smoke test：
+当前 smoke tests：
 
-- `message_log_smoke.cpp`：验证 message log 写入、100 MiB 风格容量限制和读取。
+- `core_events_smoke.cpp`：验证统一事件模型和 instrument 模型的基础语义。
 - `binance_feeds_smoke.cpp`：验证 Binance feed key、connection spec 和 envelope 生成。
 - `websocket_endpoint_smoke.cpp`：验证 `md-net` WebSocket endpoint 解析。
 - `spsc_ring_smoke.cpp`：验证 SPSC ring 的顺序、满队列和双线程读写。
+- `feed_session_smoke.cpp`：验证 feed session 重试、停止条件和统计。
 
-装好 CMake 后可以通过 `ctest` 运行。
+运行：
+
+```bash
+ctest --test-dir cmake-build-debug --output-on-failure
+```

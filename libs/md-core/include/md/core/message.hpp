@@ -11,10 +11,11 @@ namespace md::core {
 
 enum class PayloadKind : std::uint16_t {
   Unknown = 0,
-  ProviderMessage = 1,
+  RawProviderMessage = 1,
   Trade = 2,
   Quote = 3,
-  BookDelta = 4,
+  BookUpdate = 4,
+  BookDelta = BookUpdate,
   BookSnapshot = 5,
   Status = 6,
   Heartbeat = 7,
@@ -136,10 +137,10 @@ template <typename Payload> struct MessageFrame {
 };
 
 template <std::size_t MaxBytes = kDefaultProviderPayloadBytes>
-using ProviderMessageFrame = MessageFrame<BytePayload<MaxBytes>>;
+using RawProviderMessageFrame = MessageFrame<BytePayload<MaxBytes>>;
 
 template <std::size_t MaxBytes>
-[[nodiscard]] bool assign_payload(ProviderMessageFrame<MaxBytes> &frame,
+[[nodiscard]] bool assign_payload(RawProviderMessageFrame<MaxBytes> &frame,
                                   std::span<const std::byte> data) noexcept {
   if (!frame.payload.assign(data)) {
     return false;
@@ -149,7 +150,7 @@ template <std::size_t MaxBytes>
 }
 
 template <std::size_t MaxBytes>
-[[nodiscard]] bool assign_payload(ProviderMessageFrame<MaxBytes> &frame,
+[[nodiscard]] bool assign_payload(RawProviderMessageFrame<MaxBytes> &frame,
                                   std::string_view text) noexcept {
   if (!frame.payload.assign(text)) {
     return false;

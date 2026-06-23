@@ -10,7 +10,7 @@ md::core::FeedMessageView make_message(std::uint64_t seq,
                                        std::uint64_t recv_ts_ns,
                                        std::string_view payload = "{}") {
   md::core::FeedMessageView message{};
-  message.envelope.payload_kind = md::core::PayloadKind::ProviderMessage;
+  message.envelope.payload_kind = md::core::PayloadKind::RawProviderMessage;
   message.envelope.payload_encoding = md::core::PayloadEncoding::ProviderJson;
   message.envelope.capture_seq = seq;
   message.envelope.recv_ts_ns = recv_ts_ns;

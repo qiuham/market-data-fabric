@@ -9,7 +9,7 @@ md-node --roles=gateway --config configs/prod/crypto/binance_spot.yaml
 md-node --roles=gateway --config configs/prod/cn_futures/ctp.yaml
 ```
 
-这种方式简单、可调试，适合先把 adapter、标准化、录制、回放和消费端流程跑通。
+这种方式简单、可调试，适合先把 adapter、标准化、publisher 和消费端流程跑通。
 
 ## 第二阶段
 

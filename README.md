@@ -1,206 +1,120 @@
-# Market Data Fabric 行情数据平台
+# Market Data Fabric
 
-`market-data-fabric` 是一个面向量化系统的 C++ 行情数据平台骨架，目标是把多市场、多供应商的行情接入统一成稳定的内部事件模型，并通过可插拔传输层分发给策略、记录器、回放服务和下游分析系统。
+`market-data-fabric` 是一个 C++20 行情接入和标准化骨架，目标是把不同交易所、券商或行情供应商的实时数据转换成稳定的内部事件模型，再交给 publisher / client / book builder 等下游模块。
 
-这个项目希望同时覆盖：
+当前重点是 crypto live 接入和 mapper，不是历史回放或持久化日志。
 
-- 加密货币行情：现货、合约、期权等。
-- A 股行情：券商柜台、行情供应商、Level-1/Level-2 等。
-- 美股行情：券商 API、第三方行情、交易所/授权数据源等。
-- 期货行情：CTP、易盛、柜台 SDK、交易所或供应商专线等。
+## 当前方向
 
-核心设计原则是：行情接入、字段转换、分发方式、服务治理、消费端接口互相解耦。中频系统可以通过统一服务发布行情；未来低延迟或高频场景可以复用干净的核心库和部分解码/book 组件。
+- 先接入 live raw feed，再逐步增加标准化 mapper。
+- 下游主接口使用统一事件模型，不直接依赖交易所 raw schema。
+- 核心行情事件不按 crypto / 股票 / 期货拆成多套；资产类别、合约属性和精度放在 refdata。
+- L2 聚合盘口使用批量 `BookUpdate`，不把一条 depth 消息拆成丢失序号和 checksum 的单价位事件。
+- 只有真实订单级 feed 才输出 `OrderEvent` / `Execution`，不从 L2 聚合盘口伪造 Lv3。
 
-## 设计目标
+## 已有能力
 
-- 将不同外部行情源标准化为统一的内部事件模型。
-- 统一支持 Lv3 订单级事件模型：`OrderEvent` 和 `Execution`。
-- 保持 `md-core` 不依赖任何供应商 SDK、消息队列、数据库或服务框架。
-- 将供应商字段转换放在各自 adapter 目录，避免污染服务层。
-- 支持 NATS、Kafka、共享内存、TCP、UDP 组播、文件等多种分发和落盘方式。
-- 通过 `md-client` 把策略消费行情的方式透明化，降低策略侧重复代码。
-- 通过 `md-cluster` 预留分布式部署能力，包括节点注册、租约、分片、主备切换和发布者 epoch。
-- 通过 `md-runtime` 提前规划 CPU 绑核、线程优先级、计时器、内存预分配等低延迟运行时能力。
-- 让普通中频部署和未来高频复用共用基础模型，但不让高频热路径依赖控制面或消息中间件。
+- `md-core`：`MessageEnvelope`、`RawProviderMessage`、`Trade`、`Quote`、`BookUpdate`、`BookSnapshot`、`OrderEvent`、`Execution` 等核心类型。
+- `md-refdata`：`Instrument`、`AssetClass`、`ProductType`、精度、标的、到期日等基础参考数据字段。
+- `md-adapters/crypto/binance`：Binance feed key、endpoint、connection spec 和 WebSocket live raw client。
+- `md-service`：feed session、重连/backoff、停止条件和基础运行统计。
+- `md-runtime`：SPSC ring 等低延迟基础设施。
+- `md-net`：WebSocket endpoint 解析和 Boost.Beast backend。
 
 ## 仓库结构
 
 ```text
-apps/
-  md-node/              统一进程入口，支持 gateway/controller 等角色。
-
-libs/
-  md-core/              核心事件类型、ID、时间戳、序号、sink 接口。
-  md-refdata/           品种、交易所、资产类型、交易时段、精度、symbol 映射。
-  md-book/              L1/L2/L3 MBO 盘口构建和校验。
-  md-codecs/            通用协议解析辅助工具。
-  md-adapters/          外部行情源 adapter 和供应商字段转换。
-  md-transport/         NATS、Kafka、共享内存、TCP、组播、文件等传输层。
-  md-service/           gateway 运行时、pipeline 构建、生命周期、健康检查、指标。
-  md-cluster/           分布式 assignment、lease、failover、publisher epoch、节点注册。
-  md-runtime/           CPU 绑核、调度策略、计时器、内存 profile、低延迟运行时钩子。
-  md-replay/            原始数据和标准化事件的录制与回放。
-  md-client/            策略和下游服务使用的消费端库。
-
-schemas/                网络传输、落盘、跨语言消费使用的消息 schema。
-configs/                开发、生产和参考数据配置示例。
-docs/                   架构、部署、字段转换、数据模式、高频准备度等文档。
-tests/                  单元、集成、回放、fuzz、benchmark 测试。
-scripts/                开发、CI、运维脚本。
-tools/                  构建期工具预留目录，例如 md-codegen。
-third_party/            明确需要随仓库管理的第三方依赖预留目录。
+apps/md-node/                         统一进程入口
+libs/md-core/                         核心事件、envelope、feed、sink
+libs/md-refdata/                      instrument 和参考数据模型
+libs/md-book/                         L1/L2/L3 盘口构建预留
+libs/md-adapters/crypto/binance/      Binance 行情 adapter
+libs/md-service/                      feed session 和 gateway 运行时
+libs/md-runtime/                      队列、低延迟运行时基础设施
+libs/md-net/                          网络辅助和 WebSocket backend
+libs/md-transport/                    NATS/Kafka/shm/TCP/UDP/file 传输预留
+libs/md-client/                       策略消费端库预留
+docs/                                 架构和字段转换说明
+tests/                                smoke tests
 ```
 
-## 运行角色
-
-项目采用类似 Kafka 的角色模型：代码职责分层，但部署形态可以合并或拆分。
+## 数据面
 
 ```text
-md-node --roles=gateway
-md-node --roles=controller
-md-node --roles=gateway,controller
-```
-
-早期可以只用静态 YAML 运行 gateway；后续可以接入 Kubernetes Lease、etcd、Consul，或者启用独立 controller 角色。无论控制面如何部署，实时行情 tick 都不应经过控制面。
-
-## 数据面链路
-
-```text
-外部行情源 / 供应商 SDK
+external feed / SDK
   -> adapter client
   -> decoder
-  -> provider field mapper
+  -> provider mapper
   -> md-core event
-  -> sequence checker / book builder
-  -> transport publisher
-  -> NATS / Kafka / shm / TCP / multicast / file
+  -> book / sequence check
+  -> publisher / client
 ```
 
-数据面只负责接收、解析、标准化、校验、构建盘口、发布和录制。它应该尽量简单、低抖动、少阻塞。
+第一阶段允许 `raw_only` 跑通连接和样本采集；生产主路径应逐步转向 `normalized` 或 `dual`，让策略消费统一事件。
 
-## 数据模式
+## 统一模型
 
-gateway 支持三种数据模式，方便先做 raw data 获取，再逐步接入标准化转换：
+通用事件：
 
-```text
-raw_only         只采集/录制供应商原始数据，不输出标准化事件。
-normalized_only  只输出标准化事件，不额外保留原始数据。
-dual             同时保留 raw 数据和标准化事件，长期生产更推荐。
-```
+- `Trade`：成交，`aggressor_side` 统一表示主动方 / taker 方向。
+- `Quote`：最优买卖价。
+- `BookUpdate`：L2 聚合盘口批量更新，包含 message 级序号和 checksum。
+- `BookSnapshot`：有限档或全量快照。
+- `OrderEvent` / `Execution`：真实 Lv3 订单级事件。
+- `Status` / `Heartbeat`：状态和心跳。
 
-详见 `docs/data-modes.md` 和 `docs/raw-capture.md`。
+产品差异放在 `Instrument`：
 
-## 控制面职责
+- `AssetClass`：Crypto、Equity、Futures、Options、Fx、Index。
+- `ProductType`：Spot、Perpetual、Future、Option、Index、Fund。
+- 精度、合约乘数、标的、到期日、行权价等属性。
 
-逻辑控制面负责低频元数据，不负责每条行情：
+特殊事件后续按产品扩展，例如 funding、mark price、open interest、auction imbalance、settlement price 等。
 
-- 节点注册和心跳。
-- source、symbol、shard 的 assignment。
-- 主备 lease 和故障切换。
-- publisher epoch，用于下游识别切主。
-- 配置版本和滚动发布状态。
+## Binance 当前支持
 
-第一版可以使用静态配置；规模上来后再接入外部协调系统或启用 controller 角色。
+支持生成和连接这些 Spot feed：
 
-## Adapter 字段转换
+- `trade`
+- `aggTrade`
+- `bookTicker`
+- `!bookTicker`
+- `depth`
+- `depth@100ms`
+- `depth5/10/20`
 
-供应商字段转换放在 adapter 自己的目录，不放在 `md-service`：
-
-```text
-libs/md-adapters/{asset_class}/{provider}/
-  src/*_field_mapper.cpp
-  src/*_normalizer.cpp
-  docs/field_mapping.md
-  tests/*_field_mapper_test.cpp
-  fixtures/
-```
-
-供应商 API 文档由外部文档项目维护。本仓库不维护手写 mapping YAML，字段转换以 C++ mapper 和 tests 为准。标准事件字段只在 `md-core` 定义。symbol、价格精度、数量精度、交易日、交易时段等上下文由 `md-refdata` 提供。Lv3 事件使用 `OrderEvent` 和 `Execution`，不允许 adapter 用 L2 聚合盘口伪造订单级数据。
-
-## 消费端库
-
-`md-client` 是给策略和下游服务使用的消费端库。它不包含行情源 adapter，也不包含 NATS/Kafka broker 本身。它只是封装传输客户端、schema 解码、topic/subject 规则、事件回调、回放/live 切换等逻辑。
-
-```text
-md-gateway -> broker/transport -> strategy + md-client
-```
-
-如果消费者愿意直接使用 NATS/Kafka 原生客户端，也可以绕过 `md-client`，只依赖公开的 schema 和 topic 规范。
-
-## Codegen
-
-项目预留了构建期 codegen 位置：
-
-```text
-tools/md-codegen/
-docs/codegen.md
-cmake/MdfCodegen.cmake
-```
-
-codegen 只用于构建期生成 C++ 样板，不在行情热路径解释配置文件。供应商 API 文档由外部文档项目维护，本仓库后续只消费它产出的稳定 IR。
-
-## 初始构建
-
-当前项目只是骨架。装好 CMake 和 OpenSSL 后可以执行：
+示例：
 
 ```bash
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure
-./build/md-node --binance-feed-spec-preview
+./cmake-build-debug/md-node --binance-feed-spec-preview
+./cmake-build-debug/md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --print=3
 ```
 
-Boost headers 会在系统未安装 Boost 时由 CMake 自动下载锁定版本：
-
-```text
-Boost 1.85.0
-SHA256 be0d91732d5b0cc6fbb275c7939974457e79b54d6f07ce2e3dfdd68bef883b0b
-```
-
-如果需要完全离线构建，可以提前安装 Boost，或者配置时关闭自动下载：
+## 构建和测试
 
 ```bash
-cmake -S . -B build -DMDF_FETCH_BOOST=OFF
+cmake -S . -B cmake-build-debug
+cmake --build cmake-build-debug
+ctest --test-dir cmake-build-debug --output-on-failure
 ```
 
-开发阶段依赖策略：
+如果本机没有 Boost headers，CMake 可以按锁定版本下载；离线环境可以提前安装 Boost，或配置 `-DMDF_FETCH_BOOST=OFF`。
 
-- Boost 当前只需要 headers，使用 CMake `FetchContent` 锁定版本和 SHA256；下载内容放在构建目录的 `_deps/` 下，不提交仓库。
-- OpenSSL 仍使用本机系统依赖，因为它需要链接 `libssl` / `libcrypto`，不是纯 header 依赖。
-- 如果修改过 Boost 版本或 hash，建议使用新的 build 目录，或删除旧 build 目录，避免 CMake cache 继续使用旧值。
-- 后续依赖变多后，再考虑迁移到 vcpkg/Conan 这类 manifest + lock/baseline 方案；当前先保持 CMake 原生、轻量可复现。
+## 当前路线图
 
-在线行情验证可以单独使用一个构建目录：
+1. 稳定 `Trade`、`Quote`、`BookUpdate`、`BookSnapshot` 和 `Instrument` 模型。
+2. 实现 Binance mapper：`bookTicker -> Quote`、`trade/aggTrade -> Trade`、`depth -> BookUpdate`。
+3. 建立 adapter -> mapper -> normalized event 的 gateway pipeline。
+4. 加入 publisher/client，先服务实时消费。
+5. 扩展 OKX、Bybit、Coinbase、Kraken、Gate.io 等 crypto adapter。
+6. 接入股票、期货等市场时复用核心事件，只扩展 refdata 和特殊事件。
+7. 等 live、mapper 和传输层稳定后，再补历史回放和持久化日志。
 
-```bash
-cmake -S . -B build-live -DMDF_FETCH_BOOST=ON
-cmake --build build-live
-./build-live/md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --print=3 --payload-bytes=1024
-```
+## 更多文档
 
-如果输出里显示 `backend: Boost.Beast` 并收到 JSON payload，说明 WebSocket live path 已启用。`session_stop_reason: max_messages_reached` 表示达到 `--messages` 数量后主动停止，是正常结果。
-
-`--binance-live` 使用通用 feed session 运行层，Binance 只提供具体连接和 feed 解析。可用的生命周期参数包括：
-
-```bash
---max-attempts=3        # 最大连接尝试次数，0 表示不限次数
---reconnect            # 等价于 --max-attempts=0
---backoff-ms=250       # 初始重连等待
---max-backoff-ms=30000 # 最大重连等待
---idle-timeout-ms=30000
-```
-
-如果连接断开、读失败、握手失败或网络失败，feed session 会按错误分类和 backoff 策略自动重连。这层后续会复用于 OKX、Bybit 等 adapter；交易所自己的代码只负责生成 `FeedConnectionSpec` 和处理 provider-specific message。
-
-## 路线图
-
-1. 稳定 `md-core` 事件模型、Lv3 订单级模型、参考数据模型和 replay 文件格式。
-2. 实现统一 message log、mock/replay adapter 和一个 crypto adapter。
-3. 给 Binance live client 补重连/backoff，并把 `MessageLogWriter` 接入 gateway pipeline。
-4. 增加 NATS 发布和 `md-client-nats`。
-5. 增加 CTP、IB 等 adapter，并通过平台/依赖开关隔离闭源 SDK。
-6. 实现 `md-runtime` 的 Linux 运行时能力：CPU 绑核、clock reader、memory lock、线程 profile。
-7. 增加共享内存传输和延迟 benchmark。
-8. 增加 `md-cluster` 的 lease/assignment 支持。
-9. 在 IDC 网络能力确认后，再增加 UDP 组播传输。
-10. 等第一个真实 adapter 和外部 API 文档 IR 稳定后，再实现 `tools/md-codegen`。
+- `docs/architecture.md`
+- `docs/adapter-field-mapping.md`
+- `docs/data-modes.md`
+- `docs/lv3-market-data.md`
+- `docs/hft-readiness.md`
+- `docs/deployment.md`

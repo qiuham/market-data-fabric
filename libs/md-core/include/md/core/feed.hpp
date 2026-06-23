@@ -31,7 +31,8 @@ enum class FeedKind : std::uint8_t {
   Trade = 1,
   AggregateTrade = 2,
   TopOfBook = 3,
-  BookDelta = 4,
+  BookUpdate = 4,
+  BookDelta = BookUpdate,
   BookSnapshot = 5,
   Ticker = 6,
   Candle = 7,
@@ -133,7 +134,7 @@ inline bool is_all_symbols(const std::vector<std::string> &symbols) noexcept {
 inline MessageEnvelope make_feed_envelope(
     const FeedConnectionSpec &connection, const ResolvedFeed &feed,
     std::uint64_t capture_seq, std::uint64_t recv_ts_ns,
-    PayloadKind payload_kind = PayloadKind::ProviderMessage) noexcept {
+    PayloadKind payload_kind = PayloadKind::RawProviderMessage) noexcept {
   MessageEnvelope envelope{};
   envelope.payload_kind = payload_kind;
   envelope.payload_encoding = feed.payload_encoding;
@@ -154,7 +155,7 @@ inline MessageEnvelope make_feed_envelope(
 inline MessageEnvelope make_connection_envelope(
     const FeedConnectionSpec &connection, std::uint64_t capture_seq,
     std::uint64_t recv_ts_ns,
-    PayloadKind payload_kind = PayloadKind::ProviderMessage,
+    PayloadKind payload_kind = PayloadKind::RawProviderMessage,
     PayloadEncoding payload_encoding = PayloadEncoding::ProviderJson) noexcept {
   MessageEnvelope envelope{};
   envelope.payload_kind = payload_kind;

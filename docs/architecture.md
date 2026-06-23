@@ -20,7 +20,7 @@
 
 `md-runtime` 负责低延迟运行时钩子，例如 CPU 绑核、调度策略、clock reader、内存锁定、预分配和平台相关调优。它是可选层，不应让 `md-core` 变成平台专属库。
 
-`md-client` 是消费端库。策略可以通过它消费 live 或 replay 数据，而不需要关心底层传输是 NATS、Kafka、共享内存还是其他方式。对于 Lv3 数据，消费端可以订阅 `OrderEvent` 和 `Execution`。
+`md-client` 是消费端库。策略通过它消费 live 标准化事件，而不需要关心底层传输是 NATS、Kafka、共享内存还是其他方式。对于 Lv3 数据，消费端可以订阅 `OrderEvent` 和 `Execution`。
 
 ## Kafka 风格角色模型
 
@@ -66,7 +66,6 @@ source -> adapter -> decoder -> field mapper -> normalizer -> book/sequence -> p
 - 部分 `md-codecs`
 - 部分 feed decoder
 - `md-runtime` 低延迟运行时钩子
-- replay reader（回放读取器）
 
 不应该依赖：
 

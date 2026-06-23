@@ -9,6 +9,6 @@
 统一策略：
 
 - 如果交易所或供应商提供订单级 feed，adapter 输出 `OrderEvent` 和 `Execution`。
-- 如果只提供聚合深度，adapter 只能输出 `BookDelta` / `BookSnapshot`。
+- 如果只提供聚合深度，adapter 只能输出 `BookUpdate` / `BookSnapshot`。
 - 不允许用聚合价位盘口伪造订单级 MBO。
 - 配置中必须声明实际能力：`book_model: L2Mbp` 或 `book_model: L3Mbo`。

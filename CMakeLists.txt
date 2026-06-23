@@ -81,6 +81,10 @@ if (MDF_BUILD_TESTS)
   target_link_libraries(mdf-binance-feeds-smoke PRIVATE md-adapters-binance)
   add_test(NAME binance_feeds_smoke COMMAND mdf-binance-feeds-smoke)
 
+  add_executable(mdf-core-events-smoke tests/core_events_smoke.cpp)
+  target_link_libraries(mdf-core-events-smoke PRIVATE md-core md-refdata)
+  add_test(NAME core_events_smoke COMMAND mdf-core-events-smoke)
+
   add_executable(mdf-websocket-endpoint-smoke tests/websocket_endpoint_smoke.cpp)
   target_link_libraries(mdf-websocket-endpoint-smoke PRIVATE md-net)
   add_test(NAME websocket_endpoint_smoke COMMAND mdf-websocket-endpoint-smoke)

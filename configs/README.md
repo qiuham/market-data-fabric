@@ -4,7 +4,7 @@
 
 目录约定：
 
-- `dev/`：本地开发和 mock/replay 配置。
+- `dev/`：本地开发配置。
 - `prod/`：生产 source、adapter、transport 配置示例。
 - `refdata/`：品种、交易所、精度、symbol 映射、交易时段等参考数据。
 

@@ -71,7 +71,7 @@ std::atomic_bool g_stop_requested{false};
     return true;
   }
   if (text == "depth") {
-    feed_kind = FeedKind::BookDelta;
+    feed_kind = FeedKind::BookUpdate;
     return true;
   }
   if (text == "depth20") {

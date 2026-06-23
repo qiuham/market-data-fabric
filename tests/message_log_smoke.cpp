@@ -55,7 +55,7 @@ int main() {
   md::replay::MessageLogRecord record{};
   assert(reader.read_next(record) == md::replay::MessageLogReadStatus::Ok);
   const auto stored = record.envelope();
-  assert(stored.payload_kind == md::core::PayloadKind::ProviderMessage);
+  assert(stored.payload_kind == md::core::PayloadKind::RawProviderMessage);
   assert(stored.payload_encoding == md::core::PayloadEncoding::ProviderJson);
   assert(stored.source_id == connection.source_id);
   assert(stored.connection_id == 1);
