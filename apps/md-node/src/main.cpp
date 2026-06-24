@@ -2,6 +2,7 @@
 #include "md/adapters/crypto/binance/feed_client.hpp"
 #include "md/service/feed_message_handler.hpp"
 #include "md/service/feed_session.hpp"
+#include "md/service/mapper_stats.hpp"
 #include "md/runtime/logging.hpp"
 
 #include <atomic>
@@ -28,6 +29,7 @@ struct BinanceLivePreviewArgs {
   std::uint64_t backoff_ms{250};
   std::uint64_t max_backoff_ms{30000};
   std::uint64_t idle_timeout_ms{30000};
+  bool normalize{};
   bool log_payload{};
   bool log_normalized{};
   bool reconnect_on_completed{};
@@ -186,6 +188,10 @@ feed_key_label(const md::core::FeedConnectionSpec &connection) noexcept {
       }
       continue;
     }
+    if (arg == "--normalize") {
+      args.normalize = true;
+      continue;
+    }
     if (arg == "--log-payload") {
       args.log_payload = true;
       args.log_payloads = 5;
@@ -201,6 +207,7 @@ feed_key_label(const md::core::FeedConnectionSpec &connection) noexcept {
       continue;
     }
     if (arg == "--log-normalized") {
+      args.normalize = true;
       args.log_normalized = true;
       args.log_normalized_events = 5;
       continue;
@@ -209,6 +216,7 @@ feed_key_label(const md::core::FeedConnectionSpec &connection) noexcept {
         !value.empty()) {
       std::uint64_t log_normalized_events = 0;
       if (parse_u64(value, log_normalized_events)) {
+        args.normalize = true;
         args.log_normalized = true;
         args.log_normalized_events = log_normalized_events;
       }
@@ -267,26 +275,23 @@ feed_key_label(const md::core::FeedConnectionSpec &connection) noexcept {
   return args;
 }
 
-struct BinanceQuoteLogHandler {
+struct BinanceQuoteMapperHandler {
   const md::adapters::crypto::binance::BinanceBookTickerMappingContext
       *context{};
-  std::uint64_t max_events{};
-  std::uint64_t seen{};
-  std::uint64_t logged{};
-  std::uint64_t failures{};
+  md::service::MapperRuntimeStats *stats{};
+  std::uint64_t max_logged_events{};
+  std::uint64_t logged_events{};
+  bool log_events{};
 
   bool on_message(const md::core::FeedMessageView &message) noexcept {
-    ++seen;
-    if (max_events != 0 && logged >= max_events) {
-      return true;
-    }
-
     md::core::Quote quote{};
     if (context == nullptr ||
         !md::adapters::crypto::binance::map_book_ticker_to_quote(
             message, *context, quote)) {
-      ++failures;
-      if (failures <= 3) {
+      if (stats != nullptr) {
+        stats->observe_failure(message);
+      }
+      if (stats != nullptr && stats->failures <= 3) {
         MDF_LOG_WARN("normalized_quote_failed feed_id={} payload_size={} "
                      "recv_ts_ns={}",
                      message.envelope.feed_id, message.envelope.payload_size,
@@ -295,7 +300,15 @@ struct BinanceQuoteLogHandler {
       return true;
     }
 
-    ++logged;
+    if (stats != nullptr) {
+      stats->observe_success(message);
+    }
+    if (!log_events ||
+        (max_logged_events != 0 && logged_events >= max_logged_events)) {
+      return true;
+    }
+
+    ++logged_events;
     MDF_LOG_INFO(
         "quote symbol={} exchange_seq={} bid_price={} "
         "bid_quantity={} ask_price={} ask_quantity={} recv_ts_ns={}",
@@ -308,7 +321,7 @@ struct BinanceQuoteLogHandler {
 
 struct FeedMessageLogChain {
   md::service::FeedMessageLogHandler *payload_log_handler{};
-  BinanceQuoteLogHandler *quote_log_handler{};
+  BinanceQuoteMapperHandler *quote_mapper_handler{};
 
   static bool handle(const md::core::FeedMessageView &message,
                      void *user_data) noexcept {
@@ -321,8 +334,8 @@ struct FeedMessageLogChain {
         !chain->payload_log_handler->on_message(message)) {
       return false;
     }
-    if (chain->quote_log_handler != nullptr &&
-        !chain->quote_log_handler->on_message(message)) {
+    if (chain->quote_mapper_handler != nullptr &&
+        !chain->quote_mapper_handler->on_message(message)) {
       return false;
     }
     return true;
@@ -401,9 +414,11 @@ int main(int argc, char** argv) {
                 args.reconnect_on_completed;
 
             MDF_LOG_INFO("feed_start venue=binance feeds={} key={} "
-                         "max_messages={} payload_log={} normalized_log={}",
+                         "max_messages={} normalize={} payload_log={} "
+                         "normalized_log={}",
                          connection.feeds.size(), feed_key_label(connection),
                          session_options.max_messages,
+                         args.normalize ? "true" : "false",
                          args.log_payload ? args.log_payloads : 0,
                          args.log_normalized ? args.log_normalized_events : 0);
             MDF_LOG_DEBUG(
@@ -430,12 +445,13 @@ int main(int argc, char** argv) {
             log_options.log_payload = args.log_payload;
             md::service::FeedMessageLogHandler log_handler{log_options};
             binance::BinanceBookTickerMappingContext quote_context{};
-            BinanceQuoteLogHandler quote_log_handler{};
-            if (args.log_normalized) {
+            md::service::MapperRuntimeStats quote_mapper_stats{};
+            BinanceQuoteMapperHandler quote_mapper_handler{};
+            if (args.normalize) {
                 if (spec.kind != md::core::FeedKind::TopOfBook ||
                     connection.feeds.size() != 1 ||
                     connection.feeds.front().provider_symbol.empty()) {
-                    MDF_LOG_WARN("log_normalized currently requires one "
+                    MDF_LOG_WARN("normalize currently requires one "
                                  "Binance bookTicker symbol feed");
                 } else {
                     const auto &feed = connection.feeds.front();
@@ -444,21 +460,23 @@ int main(int argc, char** argv) {
                     quote_context.instrument_id =
                         md::core::stable_id32(instrument_seed);
                     quote_context.provider_symbol = feed.provider_symbol;
-                    quote_log_handler.context = &quote_context;
-                    quote_log_handler.max_events =
+                    quote_mapper_handler.context = &quote_context;
+                    quote_mapper_handler.stats = &quote_mapper_stats;
+                    quote_mapper_handler.max_logged_events =
                         args.log_normalized_events;
+                    quote_mapper_handler.log_events = args.log_normalized;
                 }
             }
             FeedMessageLogChain log_chain{};
             log_chain.payload_log_handler =
                 args.log_payload ? &log_handler : nullptr;
-            log_chain.quote_log_handler =
-                quote_log_handler.context != nullptr ? &quote_log_handler
-                                                     : nullptr;
+            log_chain.quote_mapper_handler =
+                quote_mapper_handler.context != nullptr ? &quote_mapper_handler
+                                                       : nullptr;
             md::core::FeedMessageHandler handler = nullptr;
             void *handler_data = nullptr;
             if (log_chain.payload_log_handler != nullptr ||
-                log_chain.quote_log_handler != nullptr) {
+                log_chain.quote_mapper_handler != nullptr) {
                 handler = &FeedMessageLogChain::handle;
                 handler_data = &log_chain;
             }
@@ -506,17 +524,17 @@ int main(int argc, char** argv) {
                           static_cast<double>(result.stats.messages)
                     : 0.0;
 
-            if (args.log_payload || args.log_normalized) {
+            if (args.log_payload || args.normalize) {
                 MDF_LOG_INFO(
                     "feed_stop reason={} status={} messages={} bytes={} "
-                    "payloads={} normalized={} failures={}",
+                    "payloads={} mapped={} map_failures={}",
                     md::service::feed_session_stop_reason_name(
                         result.stop_reason),
                     md::service::feed_run_status_name(result.stats.last_status),
                     result.stats.messages, result.stats.bytes,
                     args.log_payload ? log_handler.logged() : 0,
-                    args.log_normalized ? quote_log_handler.logged : 0,
-                    args.log_normalized ? quote_log_handler.failures : 0);
+                    args.normalize ? quote_mapper_stats.output_events : 0,
+                    args.normalize ? quote_mapper_stats.failures : 0);
             } else {
                 MDF_LOG_INFO(
                     "feed_stop reason={} status={} messages={} bytes={}",
@@ -549,7 +567,7 @@ int main(int argc, char** argv) {
         "[--symbol=BTCUSDT | --symbols=BTCUSDT,ETHUSDT | --symbols=ALL] "
         "[--feed=bookTicker] [--messages=250] "
         "[--log-payload[=5]] [--payload-bytes=512] "
-        "[--log-normalized[=5]] "
+        "[--normalize] [--log-normalized[=5]] "
         "[--max-attempts=1 | --reconnect] "
         "[--backoff-ms=250] [--max-backoff-ms=30000] "
         "[--reconnect-completed] [--idle-timeout-ms=30000] "

@@ -1,4 +1,5 @@
 #include "md/service/feed_session.hpp"
+#include "md/service/mapper_stats.hpp"
 
 #include <cassert>
 #include <chrono>
@@ -30,6 +31,22 @@ md::service::FeedRunAttemptResult attempt_result(
 } // namespace
 
 int main() {
+  {
+    md::service::MapperRuntimeStats stats{};
+    const auto first = make_message(1, 1000, "one");
+    const auto second = make_message(2, 2000, "two");
+
+    stats.observe_success(first);
+    stats.observe_failure(second);
+
+    assert(stats.input_messages == 2);
+    assert(stats.output_events == 1);
+    assert(stats.failures == 1);
+    assert(stats.first_recv_ts_ns == 1000);
+    assert(stats.last_recv_ts_ns == 2000);
+    assert(stats.last_payload_size == 3);
+  }
+
   {
     md::service::FeedSessionOptions options{};
     options.max_messages = 2;

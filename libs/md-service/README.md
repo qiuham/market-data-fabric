@@ -10,6 +10,7 @@
 - 构建 adapter -> normalizer -> publisher pipeline。
 - 管理 adapter 生命周期。
 - 组装 recorder、publisher、metrics、health。
+- 维护 feed / mapper 的轻量运行统计。
 - 处理启动、停止、重连等服务级逻辑。
 
 它不应该包含具体供应商字段转换逻辑。

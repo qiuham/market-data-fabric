@@ -6,6 +6,7 @@
 
 ```bash
 md-node --binance-feed-spec-preview
+md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --normalize
 md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --log-normalized=3
 ```
 
