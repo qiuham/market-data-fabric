@@ -32,6 +32,13 @@ target_link_libraries(md-book INTERFACE md-core)
 
 add_library(md-runtime INTERFACE)
 target_include_directories(md-runtime INTERFACE libs/md-runtime/include)
+mdf_configure_quill(MDF_QUILL_FOUND MDF_QUILL_TARGET)
+if (MDF_QUILL_FOUND)
+  target_compile_definitions(md-runtime INTERFACE MDF_RUNTIME_ENABLE_QUILL=1)
+  target_link_libraries(md-runtime INTERFACE ${MDF_QUILL_TARGET})
+else()
+  target_compile_definitions(md-runtime INTERFACE MDF_RUNTIME_ENABLE_QUILL=0)
+endif()
 
 add_library(md-net INTERFACE)
 target_include_directories(md-net INTERFACE libs/md-net/include)
@@ -55,11 +62,11 @@ target_link_libraries(md-replay INTERFACE md-core)
 
 add_library(md-service INTERFACE)
 target_include_directories(md-service INTERFACE libs/md-service/include)
-target_link_libraries(md-service INTERFACE md-core md-net)
+target_link_libraries(md-service INTERFACE md-core md-net md-runtime)
 
 add_library(md-adapters-binance INTERFACE)
 target_include_directories(md-adapters-binance INTERFACE libs/md-adapters/crypto/binance/include)
-target_link_libraries(md-adapters-binance INTERFACE md-core md-net)
+target_link_libraries(md-adapters-binance INTERFACE md-core md-net md-runtime)
 
 add_library(md-client-core INTERFACE)
 target_include_directories(md-client-core INTERFACE libs/md-client/core/include)
@@ -80,6 +87,12 @@ if (MDF_BUILD_TESTS)
   add_executable(mdf-binance-feeds-smoke tests/binance_feeds_smoke.cpp)
   target_link_libraries(mdf-binance-feeds-smoke PRIVATE md-adapters-binance)
   add_test(NAME binance_feeds_smoke COMMAND mdf-binance-feeds-smoke)
+
+  add_executable(mdf-binance-book-ticker-mapper-smoke
+                 tests/binance_book_ticker_mapper_smoke.cpp)
+  target_link_libraries(mdf-binance-book-ticker-mapper-smoke PRIVATE md-adapters-binance)
+  add_test(NAME binance_book_ticker_mapper_smoke
+           COMMAND mdf-binance-book-ticker-mapper-smoke)
 
   add_executable(mdf-core-events-smoke tests/core_events_smoke.cpp)
   target_link_libraries(mdf-core-events-smoke PRIVATE md-core md-refdata)

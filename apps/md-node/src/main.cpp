@@ -1,13 +1,13 @@
 #include "md/adapters/crypto/binance/feed_client.hpp"
-#include "md/service/feed_message_sink.hpp"
+#include "md/service/feed_message_handler.hpp"
 #include "md/service/feed_session.hpp"
+#include "md/runtime/logging.hpp"
 
 #include <atomic>
 #include <chrono>
 #include <csignal>
 #include <cstddef>
 #include <ctime>
-#include <iostream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -20,13 +20,13 @@ struct BinanceLivePreviewArgs {
   std::vector<std::string> symbols{"BTCUSDT"};
   FeedKind feed_kind{FeedKind::TopOfBook};
   std::uint64_t max_messages{250};
-  std::uint64_t print_payloads{};
+  std::uint64_t log_payloads{};
   std::size_t payload_preview_bytes{512};
   std::uint32_t max_attempts{1};
   std::uint64_t backoff_ms{250};
   std::uint64_t max_backoff_ms{30000};
   std::uint64_t idle_timeout_ms{30000};
-  bool print_payload{};
+  bool log_payload{};
   bool reconnect_on_completed{};
 };
 
@@ -54,6 +54,50 @@ std::atomic_bool g_stop_requested{false};
   }
   value = parsed;
   return true;
+}
+
+[[nodiscard]] bool parse_log_level(std::string_view text,
+                                   md::runtime::LogLevel &level) noexcept {
+  if (text == "trace") {
+    level = md::runtime::LogLevel::Trace;
+    return true;
+  }
+  if (text == "debug") {
+    level = md::runtime::LogLevel::Debug;
+    return true;
+  }
+  if (text == "info") {
+    level = md::runtime::LogLevel::Info;
+    return true;
+  }
+  if (text == "warn") {
+    level = md::runtime::LogLevel::Warn;
+    return true;
+  }
+  if (text == "error") {
+    level = md::runtime::LogLevel::Error;
+    return true;
+  }
+  if (text == "off") {
+    level = md::runtime::LogLevel::Off;
+    return true;
+  }
+  return false;
+}
+
+[[nodiscard]] md::runtime::LogConfig parse_log_config(int argc,
+                                                       char **argv) noexcept {
+  md::runtime::LogConfig config{};
+  for (int i = 1; i < argc; ++i) {
+    const std::string_view arg{argv[i]};
+    if (const auto value = option_value(arg, "--log-level="); !value.empty()) {
+      md::runtime::LogLevel level{};
+      if (parse_log_level(value, level)) {
+        config.level = level;
+      }
+    }
+  }
+  return config;
 }
 
 [[nodiscard]] bool parse_feed_kind(std::string_view text,
@@ -128,16 +172,17 @@ std::atomic_bool g_stop_requested{false};
       }
       continue;
     }
-    if (arg == "--print") {
-      args.print_payload = true;
-      args.print_payloads = 5;
+    if (arg == "--log-payload") {
+      args.log_payload = true;
+      args.log_payloads = 5;
       continue;
     }
-    if (const auto value = option_value(arg, "--print="); !value.empty()) {
-      std::uint64_t print_payloads = 0;
-      if (parse_u64(value, print_payloads)) {
-        args.print_payload = true;
-        args.print_payloads = print_payloads;
+    if (const auto value = option_value(arg, "--log-payload=");
+        !value.empty()) {
+      std::uint64_t log_payloads = 0;
+      if (parse_u64(value, log_payloads)) {
+        args.log_payload = true;
+        args.log_payloads = log_payloads;
       }
       continue;
     }
@@ -219,6 +264,8 @@ void request_stop(int) noexcept {
 int main(int argc, char** argv) {
     namespace binance = md::adapters::crypto::binance;
 
+    md::runtime::init_logging(parse_log_config(argc, argv));
+
     for (int i = 1; i < argc; ++i) {
         if (std::string_view{argv[i]} == "--binance-feed-spec-preview") {
             binance::BinanceFeedSpec spec{};
@@ -228,10 +275,10 @@ int main(int argc, char** argv) {
             const auto connection = binance::make_connection_spec(
                 1, binance::BinanceEnvironment::MarketDataOnly, spec);
             const auto &feed = connection.feeds.front();
-            std::cout << "binance feed spec preview" << '\n';
-            std::cout << "provider_feed_key: " << feed.provider_feed_key << '\n';
-            std::cout << "endpoint: " << connection.endpoint << '\n';
-            std::cout << "feed_id: " << feed.feed_id << '\n';
+            MDF_LOG_INFO("binance feed spec preview");
+            MDF_LOG_INFO("provider_feed_key={}", feed.provider_feed_key);
+            MDF_LOG_INFO("endpoint={}", connection.endpoint);
+            MDF_LOG_INFO("feed_id={}", feed.feed_id);
             return 0;
         }
         const std::string_view command{argv[i]};
@@ -263,49 +310,45 @@ int main(int argc, char** argv) {
             session_options.retry.reconnect_on_completed =
                 args.reconnect_on_completed;
 
-            std::cout << "binance live feed" << '\n';
-            std::cout << "backend: Boost.Beast";
-            if (!md::net::beast::kWebSocketBackendAvailable) {
-                std::cout << " (unavailable)";
-            }
-            std::cout << '\n';
+            MDF_LOG_INFO(
+                "binance live feed backend=Boost.Beast{}",
+                md::net::beast::kWebSocketBackendAvailable ? ""
+                                                            : " unavailable");
             for (const auto &feed : connection.feeds) {
-                std::cout << "provider_feed_key: " << feed.provider_feed_key << '\n';
-                std::cout << "feed_id: " << feed.feed_id << '\n';
+                MDF_LOG_INFO("provider_feed_key={}", feed.provider_feed_key);
+                MDF_LOG_INFO("feed_id={}", feed.feed_id);
             }
-            std::cout << "endpoint: " << connection.endpoint << '\n';
-            std::cout << "feeds: " << connection.feeds.size() << '\n';
-            std::cout << "max_messages: " << session_options.max_messages << '\n';
-            std::cout << "max_attempts: "
-                      << session_options.retry.max_attempts << '\n';
-            std::cout << "backoff_ms: "
-                      << session_options.retry.initial_backoff.count() << '\n';
-            std::cout << "max_backoff_ms: "
-                      << session_options.retry.max_backoff.count() << '\n';
-            std::cout << "reconnect_on_completed: "
-                      << (session_options.retry.reconnect_on_completed ? "true"
-                                                                        : "false")
-                      << '\n';
-            std::cout << "idle_timeout_ms: "
-                      << options.websocket.idle_timeout.count() << '\n';
-            if (args.print_payload) {
-                std::cout << "print_payloads: " << args.print_payloads << '\n';
-                std::cout << "payload_preview_bytes: "
-                          << args.payload_preview_bytes << '\n';
+            MDF_LOG_INFO("endpoint={}", connection.endpoint);
+            MDF_LOG_INFO("feeds={}", connection.feeds.size());
+            MDF_LOG_INFO("max_messages={}", session_options.max_messages);
+            MDF_LOG_INFO("max_attempts={}",
+                         session_options.retry.max_attempts);
+            MDF_LOG_INFO("backoff_ms={}",
+                         session_options.retry.initial_backoff.count());
+            MDF_LOG_INFO("max_backoff_ms={}",
+                         session_options.retry.max_backoff.count());
+            MDF_LOG_INFO(
+                "reconnect_on_completed={}",
+                session_options.retry.reconnect_on_completed ? "true" : "false");
+            MDF_LOG_INFO("idle_timeout_ms={}",
+                         options.websocket.idle_timeout.count());
+            if (args.log_payload) {
+                MDF_LOG_INFO("log_payloads={}", args.log_payloads);
+                MDF_LOG_INFO("payload_preview_bytes={}",
+                             args.payload_preview_bytes);
             }
 
-            md::service::OstreamFeedMessagePrinterOptions printer_options{};
-            printer_options.max_payloads = args.print_payloads;
-            printer_options.max_payload_bytes = args.payload_preview_bytes;
-            printer_options.print_metadata = args.print_payload;
-            printer_options.print_payload = args.print_payload;
-            md::service::OstreamFeedMessagePrinter printer{std::cout,
-                                                           printer_options};
+            md::service::FeedMessageLogOptions log_options{};
+            log_options.max_payloads = args.log_payloads;
+            log_options.max_payload_bytes = args.payload_preview_bytes;
+            log_options.log_metadata = args.log_payload;
+            log_options.log_payload = args.log_payload;
+            md::service::FeedMessageLogHandler log_handler{log_options};
             md::core::FeedMessageHandler handler = nullptr;
             void *handler_data = nullptr;
-            if (args.print_payload) {
-                handler = &md::service::OstreamFeedMessagePrinter::handle;
-                handler_data = &printer;
+            if (args.log_payload) {
+                handler = &md::service::FeedMessageLogHandler::handle;
+                handler_data = &log_handler;
             }
 
             std::signal(SIGINT, &request_stop);
@@ -351,51 +394,51 @@ int main(int argc, char** argv) {
                           static_cast<double>(result.stats.messages)
                     : 0.0;
 
-            std::cout << "session_stop_reason: "
-                      << md::service::feed_session_stop_reason_name(
-                             result.stop_reason)
-                      << '\n';
-            std::cout << "last_status: "
-                      << md::service::feed_run_status_name(
-                             result.stats.last_status)
-                      << '\n';
-            std::cout << "last_error_class: "
-                      << md::service::feed_error_class_name(
-                             result.stats.last_error_class)
-                      << '\n';
+            MDF_LOG_INFO(
+                "session_stop_reason={}",
+                md::service::feed_session_stop_reason_name(result.stop_reason));
+            MDF_LOG_INFO(
+                "last_status={}",
+                md::service::feed_run_status_name(result.stats.last_status));
+            MDF_LOG_INFO("last_error_class={}",
+                         md::service::feed_error_class_name(
+                             result.stats.last_error_class));
             if (!result.stats.last_error.empty()) {
-                std::cout << "last_error: " << result.stats.last_error << '\n';
+                MDF_LOG_WARN("last_error={}", result.stats.last_error);
             }
-            std::cout << "attempts: " << result.stats.attempts << '\n';
-            std::cout << "reconnects: " << result.stats.reconnects << '\n';
-            std::cout << "messages: " << result.stats.messages << '\n';
-            std::cout << "bytes: " << result.stats.bytes << '\n';
-            std::cout << "active_sec: " << active_sec << '\n';
-            std::cout << "active_msg_per_sec: " << active_msg_per_sec << '\n';
-            std::cout << "cpu_sec: " << cpu_sec << '\n';
-            std::cout << "cpu_us_per_msg: " << cpu_us_per_msg << '\n';
-            std::cout << "avg_bytes: " << avg_bytes << '\n';
-            if (args.print_payload) {
-                std::cout << "printed_payloads: " << printer.printed() << '\n';
+            MDF_LOG_INFO("attempts={}", result.stats.attempts);
+            MDF_LOG_INFO("reconnects={}", result.stats.reconnects);
+            MDF_LOG_INFO("messages={}", result.stats.messages);
+            MDF_LOG_INFO("bytes={}", result.stats.bytes);
+            MDF_LOG_INFO("active_sec={}", active_sec);
+            MDF_LOG_INFO("active_msg_per_sec={}", active_msg_per_sec);
+            MDF_LOG_INFO("cpu_sec={}", cpu_sec);
+            MDF_LOG_INFO("cpu_us_per_msg={}", cpu_us_per_msg);
+            MDF_LOG_INFO("avg_bytes={}", avg_bytes);
+            if (args.log_payload) {
+                MDF_LOG_INFO("logged_payloads={}", log_handler.logged());
             }
             return result.ok() ? 0 : 1;
         }
     }
 
-    std::cout << "md-node skeleton" << '\n';
-    std::cout << "roles: gateway, controller, or gateway,controller" << '\n';
-    std::cout << "preview: --binance-feed-spec-preview" << '\n';
-    std::cout << "live feed: --binance-live "
-                 "[--symbol=BTCUSDT | --symbols=BTCUSDT,ETHUSDT | --symbols=ALL] "
-                 "[--feed=bookTicker] [--messages=250] "
-                 "[--print[=5]] [--payload-bytes=512] "
-                 "[--max-attempts=1 | --reconnect] "
-                 "[--backoff-ms=250] [--max-backoff-ms=30000] "
-                 "[--reconnect-completed] [--idle-timeout-ms=30000]" << '\n';
-    std::cout << "args:";
+    MDF_LOG_INFO("md-node skeleton");
+    MDF_LOG_INFO("roles: gateway, controller, or gateway,controller");
+    MDF_LOG_INFO("preview: --binance-feed-spec-preview");
+    MDF_LOG_INFO(
+        "live feed: --binance-live "
+        "[--symbol=BTCUSDT | --symbols=BTCUSDT,ETHUSDT | --symbols=ALL] "
+        "[--feed=bookTicker] [--messages=250] "
+        "[--log-payload[=5]] [--payload-bytes=512] "
+        "[--max-attempts=1 | --reconnect] "
+        "[--backoff-ms=250] [--max-backoff-ms=30000] "
+        "[--reconnect-completed] [--idle-timeout-ms=30000] "
+        "[--log-level=info]");
+    std::string args_line{"args:"};
     for (int i = 1; i < argc; ++i) {
-        std::cout << ' ' << argv[i];
+        args_line += ' ';
+        args_line += argv[i];
     }
-    std::cout << '\n';
+    MDF_LOG_INFO("{}", args_line);
     return 0;
 }

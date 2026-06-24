@@ -2,7 +2,7 @@
 
 #include "md/core/feed.hpp"
 #include "md/net/websocket.hpp"
-#include "md/service/feed_message_sink.hpp"
+#include "md/service/feed_message_handler.hpp"
 
 #include <algorithm>
 #include <atomic>

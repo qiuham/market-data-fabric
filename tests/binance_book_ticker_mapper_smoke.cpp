@@ -1,0 +1,71 @@
+#include "md/adapters/crypto/binance/book_ticker_mapper.hpp"
+
+#include <cassert>
+#include <cstdint>
+#include <string_view>
+
+int main() {
+  namespace binance = md::adapters::crypto::binance;
+
+  std::int64_t fixed = 0;
+  assert(md::core::parse_decimal_to_fixed("25.35190000", 8, fixed));
+  assert(fixed == 2535190000LL);
+  assert(md::core::parse_decimal_to_fixed("25.3519000000", 8, fixed));
+  assert(fixed == 2535190000LL);
+  assert(!md::core::parse_decimal_to_fixed("25.351900001", 8, fixed));
+
+  binance::BinanceBookTickerMappingContext context{};
+  context.instrument_id = 1001;
+  context.price_scale = 8;
+  context.quantity_scale = 8;
+  context.provider_symbol = "bnbusdt";
+
+  constexpr std::string_view payload{
+      R"({"u":400900217,"s":"BNBUSDT","b":"25.35190000","B":"31.21000000","a":"25.36520000","A":"40.66000000"})"};
+
+  md::core::Quote quote{};
+  assert(binance::map_book_ticker_to_quote(payload, context, quote));
+  assert(quote.header.payload_kind == md::core::PayloadKind::Quote);
+  assert(quote.header.payload_encoding == md::core::PayloadEncoding::MdStruct);
+  assert(quote.header.source_id == binance::kBinanceSourceId);
+  assert(quote.header.venue_id ==
+         static_cast<std::uint32_t>(md::core::VenueId::Binance));
+  assert(quote.header.instrument_id == 1001);
+  assert(quote.header.exchange_seq == 400900217);
+  assert(quote.bid_price == 2535190000LL);
+  assert(quote.bid_quantity == 3121000000LL);
+  assert(quote.ask_price == 2536520000LL);
+  assert(quote.ask_quantity == 4066000000LL);
+
+  constexpr std::string_view combined_payload{
+      R"({"stream":"bnbusdt@bookTicker","data":{"u":400900218,"s":"BNBUSDT","b":"25.35000000","B":"1.00000000","a":"25.36000000","A":"2.50000000"}})"};
+  assert(binance::map_book_ticker_to_quote(combined_payload, context, quote));
+  assert(quote.header.exchange_seq == 400900218);
+  assert(quote.bid_price == 2535000000LL);
+  assert(quote.bid_quantity == 100000000LL);
+  assert(quote.ask_price == 2536000000LL);
+  assert(quote.ask_quantity == 250000000LL);
+
+  md::core::FeedMessageView message{};
+  message.envelope.payload_kind = md::core::PayloadKind::RawProviderMessage;
+  message.envelope.payload_encoding = md::core::PayloadEncoding::ProviderJson;
+  message.envelope.connection_id = 7;
+  message.envelope.feed_id = 8;
+  message.envelope.capture_seq = 9;
+  message.envelope.recv_ts_ns = 10;
+  message.payload = payload;
+  assert(binance::map_book_ticker_to_quote(message, context, quote));
+  assert(quote.header.payload_kind == md::core::PayloadKind::Quote);
+  assert(quote.header.payload_encoding == md::core::PayloadEncoding::MdStruct);
+  assert(quote.header.connection_id == 7);
+  assert(quote.header.feed_id == 8);
+  assert(quote.header.capture_seq == 9);
+  assert(quote.header.recv_ts_ns == 10);
+  assert(quote.header.exchange_seq == 400900217);
+
+  context.provider_symbol = "BTCUSDT";
+  assert(!binance::map_book_ticker_to_quote(payload, context, quote));
+  assert(!binance::map_book_ticker_to_quote("{}", context, quote));
+
+  return 0;
+}

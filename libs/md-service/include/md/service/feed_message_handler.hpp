@@ -1,11 +1,11 @@
 #pragma once
 
 #include "md/core/feed.hpp"
+#include "md/runtime/logging.hpp"
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <ostream>
 #include <string_view>
 
 namespace md::service {
@@ -28,64 +28,63 @@ struct FeedMessageStats {
   }
 };
 
-struct FeedMessageSink {
+struct FeedMessageHandlerBinding {
   md::core::FeedMessageHandler handler{};
   void *user_data{};
 };
 
 inline bool dispatch_feed_message(const md::core::FeedMessageView &message,
                                   void *user_data) noexcept {
-  auto *sink = static_cast<FeedMessageSink *>(user_data);
-  if (sink == nullptr || sink->handler == nullptr) {
+  auto *binding = static_cast<FeedMessageHandlerBinding *>(user_data);
+  if (binding == nullptr || binding->handler == nullptr) {
     return true;
   }
-  return sink->handler(message, sink->user_data);
+  return binding->handler(message, binding->user_data);
 }
 
-struct OstreamFeedMessagePrinterOptions {
+struct FeedMessageLogOptions {
   std::uint64_t max_payloads{};
   std::size_t max_payload_bytes{512};
-  bool print_metadata{true};
-  bool print_payload{false};
+  bool log_metadata{true};
+  bool log_payload{false};
 };
 
-class OstreamFeedMessagePrinter final {
+class FeedMessageLogHandler final {
 public:
-  OstreamFeedMessagePrinter(std::ostream &out,
-                            OstreamFeedMessagePrinterOptions options) noexcept
-      : out_(&out), options_(options) {}
+  explicit FeedMessageLogHandler(FeedMessageLogOptions options) noexcept
+      : options_(options) {}
 
   static bool handle(const md::core::FeedMessageView &message,
                      void *user_data) noexcept {
-    auto *printer = static_cast<OstreamFeedMessagePrinter *>(user_data);
-    return printer == nullptr || printer->on_message(message);
+    auto *handler = static_cast<FeedMessageLogHandler *>(user_data);
+    return handler == nullptr || handler->on_message(message);
   }
 
   bool on_message(const md::core::FeedMessageView &message) noexcept {
     ++seen_;
-    if (options_.max_payloads != 0 && printed_ >= options_.max_payloads) {
+    if (options_.max_payloads != 0 && logged_ >= options_.max_payloads) {
       return true;
     }
-    if (!options_.print_metadata && !options_.print_payload) {
+    if (!options_.log_metadata && !options_.log_payload) {
       return true;
     }
 
-    ++printed_;
+    ++logged_;
     try {
-      if (options_.print_metadata) {
-        *out_ << "message=" << seen_
-              << " capture_seq=" << message.envelope.capture_seq
-              << " feed_id=" << message.envelope.feed_id
-              << " payload_size=" << message.envelope.payload_size
-              << " recv_ts_ns=" << message.envelope.recv_ts_ns << '\n';
+      if (options_.log_metadata) {
+        MDF_LOG_INFO(
+            "feed_message message={} capture_seq={} feed_id={} payload_size={} "
+            "recv_ts_ns={}",
+            seen_, message.envelope.capture_seq, message.envelope.feed_id,
+            message.envelope.payload_size, message.envelope.recv_ts_ns);
       }
-      if (options_.print_payload) {
+      if (options_.log_payload) {
         const auto payload = payload_preview(message.payload);
-        out_->write(payload.data(), static_cast<std::streamsize>(payload.size()));
         if (payload.size() < message.payload.size()) {
-          *out_ << "...";
+          MDF_LOG_INFO("feed_payload {}...", payload);
+        } else {
+          MDF_LOG_INFO("feed_payload {}", payload);
         }
-        *out_ << '\n';
       }
     } catch (...) {
       return false;
@@ -94,7 +93,7 @@ public:
   }
 
   [[nodiscard]] std::uint64_t seen() const noexcept { return seen_; }
-  [[nodiscard]] std::uint64_t printed() const noexcept { return printed_; }
+  [[nodiscard]] std::uint64_t logged() const noexcept { return logged_; }
 
 private:
   [[nodiscard]] std::string_view
@@ -105,10 +104,9 @@ private:
     return payload.substr(0, std::min(payload.size(), options_.max_payload_bytes));
   }
 
-  std::ostream *out_{};
-  OstreamFeedMessagePrinterOptions options_{};
+  FeedMessageLogOptions options_{};
   std::uint64_t seen_{};
-  std::uint64_t printed_{};
+  std::uint64_t logged_{};
 };
 
 } // namespace md::service

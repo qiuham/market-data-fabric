@@ -16,9 +16,9 @@
 
 - `md-core`：`MessageEnvelope`、`RawProviderMessage`、`Trade`、`Quote`、`BookUpdate`、`BookSnapshot`、`OrderEvent`、`Execution` 等核心类型。
 - `md-refdata`：`Instrument`、`AssetClass`、`ProductType`、精度、标的、到期日等基础参考数据字段。
-- `md-adapters/crypto/binance`：Binance feed key、endpoint、connection spec 和 WebSocket live raw client。
+- `md-adapters/crypto/binance`：Binance feed key、endpoint、WebSocket live raw client 和 `bookTicker -> Quote` mapper。
 - `md-service`：feed session、重连/backoff、停止条件和基础运行统计。
-- `md-runtime`：SPSC ring 等低延迟基础设施。
+- `md-runtime`：SPSC ring、统一日志封装等低延迟基础设施。
 - `md-net`：WebSocket endpoint 解析和 Boost.Beast backend。
 
 ## 仓库结构
@@ -87,7 +87,7 @@ external feed / SDK
 
 ```bash
 ./cmake-build-debug/md-node --binance-feed-spec-preview
-./cmake-build-debug/md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --print=3
+./cmake-build-debug/md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --log-payload=3
 ```
 
 ## 构建和测试
@@ -100,15 +100,16 @@ ctest --test-dir cmake-build-debug --output-on-failure
 
 如果本机没有 Boost headers，CMake 可以按锁定版本下载；离线环境可以提前安装 Boost，或配置 `-DMDF_FETCH_BOOST=OFF`。
 
+日志默认走 `md-runtime` 的统一封装；如果系统有 `quill` 或配置 `-DMDF_FETCH_QUILL=ON`，会使用 quill 异步日志，否则退回轻量 stderr logger。
+
 ## 当前路线图
 
-1. 稳定 `Trade`、`Quote`、`BookUpdate`、`BookSnapshot` 和 `Instrument` 模型。
-2. 实现 Binance mapper：`bookTicker -> Quote`、`trade/aggTrade -> Trade`、`depth -> BookUpdate`。
-3. 建立 adapter -> mapper -> normalized event 的 gateway pipeline。
-4. 加入 publisher/client，先服务实时消费。
-5. 扩展 OKX、Bybit、Coinbase、Kraken、Gate.io 等 crypto adapter。
-6. 接入股票、期货等市场时复用核心事件，只扩展 refdata 和特殊事件。
-7. 等 live、mapper 和传输层稳定后，再补历史回放和持久化日志。
+1. 继续实现 Binance mapper：`trade/aggTrade -> Trade`、`depth -> BookUpdate`。
+2. 建立 adapter -> mapper -> normalized event 的 gateway pipeline。
+3. 加入 publisher/client，先服务实时消费。
+4. 扩展 OKX、Bybit、Coinbase、Kraken、Gate.io 等 crypto adapter。
+5. 接入股票、期货等市场时复用核心事件，只扩展 refdata 和特殊事件。
+6. 等 live、mapper 和传输层稳定后，再补历史回放和持久化日志。
 
 ## 更多文档
 

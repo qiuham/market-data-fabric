@@ -43,3 +43,51 @@ function(mdf_configure_boost_headers out_found out_target)
   set(${out_found} TRUE PARENT_SCOPE)
   set(${out_target} mdf-boost-headers PARENT_SCOPE)
 endfunction()
+
+
+set(MDF_QUILL_VERSION "12.0.0")
+option(MDF_ENABLE_QUILL "Use quill for application/runtime logging" ON)
+option(MDF_FETCH_QUILL
+       "Download pinned quill when a system quill package is not found" OFF)
+
+function(mdf_configure_quill out_found out_target)
+  if (NOT MDF_ENABLE_QUILL)
+    set(${out_found} FALSE PARENT_SCOPE)
+    set(${out_target} "" PARENT_SCOPE)
+    return()
+  endif()
+
+  find_package(quill CONFIG QUIET)
+  if (TARGET quill::quill)
+    set(${out_found} TRUE PARENT_SCOPE)
+    set(${out_target} quill::quill PARENT_SCOPE)
+    return()
+  endif()
+
+  if (NOT MDF_FETCH_QUILL)
+    set(${out_found} FALSE PARENT_SCOPE)
+    set(${out_target} "" PARENT_SCOPE)
+    return()
+  endif()
+
+  set(QUILL_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(QUILL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+  set(QUILL_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
+  set(QUILL_BUILD_FUZZING OFF CACHE BOOL "" FORCE)
+  set(QUILL_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+
+  FetchContent_Declare(
+      mdf_quill
+      GIT_REPOSITORY https://github.com/odygrd/quill.git
+      GIT_TAG v${MDF_QUILL_VERSION}
+      GIT_SHALLOW TRUE)
+  FetchContent_MakeAvailable(mdf_quill)
+
+  if (TARGET quill::quill)
+    set(${out_found} TRUE PARENT_SCOPE)
+    set(${out_target} quill::quill PARENT_SCOPE)
+  else()
+    set(${out_found} FALSE PARENT_SCOPE)
+    set(${out_target} "" PARENT_SCOPE)
+  endif()
+endfunction()
