@@ -6,7 +6,7 @@
 
 ```bash
 md-node --binance-feed-spec-preview
-md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --log-payload=3
+md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --log-normalized=3
 ```
 
 后续再增加 `--roles=gateway`、配置文件加载和 publisher pipeline。

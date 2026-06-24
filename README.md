@@ -87,7 +87,7 @@ external feed / SDK
 
 ```bash
 ./cmake-build-debug/md-node --binance-feed-spec-preview
-./cmake-build-debug/md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --log-payload=3
+./cmake-build-debug/md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --log-normalized=3
 ```
 
 ## 构建和测试
