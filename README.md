@@ -21,6 +21,15 @@
 - `md-runtime`：SPSC ring、统一日志封装等低延迟基础设施。
 - `md-net`：WebSocket endpoint 解析和 Boost.Beast backend。
 
+## 当前进度
+
+- Binance Spot `bookTicker` 已完成 live raw 接入和 `Quote` 标准化映射。
+- `bookTicker -> Quote` 已用 Binance 在线 BTCUSDT 数据验证，能同时查看 raw payload 和 normalized quote。
+- mapper 使用固定点整数解析价格和数量，不走 `double`，避免精度误差和额外开销。
+- 默认生产路径不输出逐条行情日志；`--log-payload` / `--log-normalized` 只用于调试 mapper 和字段检查。
+- 启动、停止、重连、异常保留摘要日志；高频运行状态后续用轻量运行指标统计，不靠逐条日志。
+- 本地 smoke tests 覆盖核心事件、Binance feed、mapper、session、WebSocket endpoint 和 SPSC ring。
+
 ## 仓库结构
 
 ```text
@@ -90,6 +99,12 @@ external feed / SDK
 ./cmake-build-debug/md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --log-normalized=3
 ```
 
+生产或长时间运行时不要打开逐条 payload / normalized 日志，建议只保留 warn 以上日志：
+
+```bash
+./md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --log-level=warn
+```
+
 ## 构建和测试
 
 ```bash
@@ -104,12 +119,14 @@ ctest --test-dir cmake-build-debug --output-on-failure
 
 ## 当前路线图
 
-1. 继续实现 Binance mapper：`trade/aggTrade -> Trade`、`depth -> BookUpdate`。
-2. 建立 adapter -> mapper -> normalized event 的 gateway pipeline。
-3. 加入 publisher/client，先服务实时消费。
-4. 扩展 OKX、Bybit、Coinbase、Kraken、Gate.io 等 crypto adapter。
-5. 接入股票、期货等市场时复用核心事件，只扩展 refdata 和特殊事件。
-6. 等 live、mapper 和传输层稳定后，再补历史回放和持久化日志。
+1. 把 mapper 成功/失败等运行指标从调试日志 handler 中拆出来，形成独立 lightweight stats。
+2. 继续实现 Binance mapper：`trade/aggTrade -> Trade`。
+3. 实现 Binance `depth -> BookUpdate`，保留 message 级序号、prev seq 和 checksum。
+4. 建立 adapter -> mapper -> normalized event 的 gateway pipeline，feed 线程只做轻量接收和投递。
+5. 加入 publisher/client，先服务实时消费。
+6. 扩展 OKX、Bybit、Coinbase、Kraken、Gate.io 等 crypto adapter。
+7. 接入股票、期货等市场时复用核心事件，只扩展 refdata 和特殊事件。
+8. 等 live、mapper 和传输层稳定后，再补历史回放和持久化日志。
 
 ## 更多文档
 
