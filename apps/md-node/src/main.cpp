@@ -128,6 +128,17 @@ std::atomic_bool g_stop_requested{false};
   return false;
 }
 
+[[nodiscard]] std::string_view
+feed_key_label(const md::core::FeedConnectionSpec &connection) noexcept {
+  if (connection.feeds.empty()) {
+    return "";
+  }
+  if (connection.feeds.size() != 1) {
+    return "multiple";
+  }
+  return connection.feeds.front().provider_feed_key;
+}
+
 [[nodiscard]] std::vector<std::string> parse_symbol_list(std::string_view text) {
   std::vector<std::string> symbols{};
   std::size_t start = 0;
@@ -286,9 +297,9 @@ struct BinanceQuoteLogHandler {
 
     ++logged;
     MDF_LOG_INFO(
-        "quote instrument_id={} exchange_seq={} bid_price={} "
+        "quote symbol={} exchange_seq={} bid_price={} "
         "bid_quantity={} ask_price={} ask_quantity={} recv_ts_ns={}",
-        quote.header.instrument_id, quote.header.exchange_seq, quote.bid_price,
+        context->provider_symbol, quote.header.exchange_seq, quote.bid_price,
         quote.bid_quantity, quote.ask_price, quote.ask_quantity,
         quote.header.recv_ts_ns);
     return true;
@@ -389,36 +400,27 @@ int main(int argc, char** argv) {
             session_options.retry.reconnect_on_completed =
                 args.reconnect_on_completed;
 
-            MDF_LOG_INFO(
-                "binance live feed backend=Boost.Beast{}",
+            MDF_LOG_INFO("feed_start venue=binance feeds={} key={} "
+                         "max_messages={} payload_log={} normalized_log={}",
+                         connection.feeds.size(), feed_key_label(connection),
+                         session_options.max_messages,
+                         args.log_payload ? args.log_payloads : 0,
+                         args.log_normalized ? args.log_normalized_events : 0);
+            MDF_LOG_DEBUG(
+                "feed_config backend=Boost.Beast{} endpoint={} max_attempts={} "
+                "backoff_ms={} max_backoff_ms={} reconnect_on_completed={} "
+                "idle_timeout_ms={} payload_preview_bytes={}",
                 md::net::beast::kWebSocketBackendAvailable ? ""
-                                                            : " unavailable");
+                                                            : " unavailable",
+                connection.endpoint, session_options.retry.max_attempts,
+                session_options.retry.initial_backoff.count(),
+                session_options.retry.max_backoff.count(),
+                session_options.retry.reconnect_on_completed ? "true" : "false",
+                options.websocket.idle_timeout.count(),
+                args.payload_preview_bytes);
             for (const auto &feed : connection.feeds) {
-                MDF_LOG_INFO("provider_feed_key={}", feed.provider_feed_key);
-                MDF_LOG_INFO("feed_id={}", feed.feed_id);
-            }
-            MDF_LOG_INFO("endpoint={}", connection.endpoint);
-            MDF_LOG_INFO("feeds={}", connection.feeds.size());
-            MDF_LOG_INFO("max_messages={}", session_options.max_messages);
-            MDF_LOG_INFO("max_attempts={}",
-                         session_options.retry.max_attempts);
-            MDF_LOG_INFO("backoff_ms={}",
-                         session_options.retry.initial_backoff.count());
-            MDF_LOG_INFO("max_backoff_ms={}",
-                         session_options.retry.max_backoff.count());
-            MDF_LOG_INFO(
-                "reconnect_on_completed={}",
-                session_options.retry.reconnect_on_completed ? "true" : "false");
-            MDF_LOG_INFO("idle_timeout_ms={}",
-                         options.websocket.idle_timeout.count());
-            if (args.log_payload) {
-                MDF_LOG_INFO("log_payloads={}", args.log_payloads);
-                MDF_LOG_INFO("payload_preview_bytes={}",
-                             args.payload_preview_bytes);
-            }
-            if (args.log_normalized) {
-                MDF_LOG_INFO("log_normalized_events={}",
-                             args.log_normalized_events);
+                MDF_LOG_DEBUG("feed_resolved key={} feed_id={}",
+                              feed.provider_feed_key, feed.feed_id);
             }
 
             md::service::FeedMessageLogOptions log_options{};
@@ -504,36 +506,37 @@ int main(int argc, char** argv) {
                           static_cast<double>(result.stats.messages)
                     : 0.0;
 
-            MDF_LOG_INFO(
-                "session_stop_reason={}",
-                md::service::feed_session_stop_reason_name(result.stop_reason));
-            MDF_LOG_INFO(
-                "last_status={}",
-                md::service::feed_run_status_name(result.stats.last_status));
-            MDF_LOG_INFO("last_error_class={}",
-                         md::service::feed_error_class_name(
-                             result.stats.last_error_class));
+            if (args.log_payload || args.log_normalized) {
+                MDF_LOG_INFO(
+                    "feed_stop reason={} status={} messages={} bytes={} "
+                    "payloads={} normalized={} failures={}",
+                    md::service::feed_session_stop_reason_name(
+                        result.stop_reason),
+                    md::service::feed_run_status_name(result.stats.last_status),
+                    result.stats.messages, result.stats.bytes,
+                    args.log_payload ? log_handler.logged() : 0,
+                    args.log_normalized ? quote_log_handler.logged : 0,
+                    args.log_normalized ? quote_log_handler.failures : 0);
+            } else {
+                MDF_LOG_INFO(
+                    "feed_stop reason={} status={} messages={} bytes={}",
+                    md::service::feed_session_stop_reason_name(
+                        result.stop_reason),
+                    md::service::feed_run_status_name(result.stats.last_status),
+                    result.stats.messages, result.stats.bytes);
+            }
             if (!result.stats.last_error.empty()) {
                 MDF_LOG_WARN("last_error={}", result.stats.last_error);
             }
-            MDF_LOG_INFO("attempts={}", result.stats.attempts);
-            MDF_LOG_INFO("reconnects={}", result.stats.reconnects);
-            MDF_LOG_INFO("messages={}", result.stats.messages);
-            MDF_LOG_INFO("bytes={}", result.stats.bytes);
-            MDF_LOG_INFO("active_sec={}", active_sec);
-            MDF_LOG_INFO("active_msg_per_sec={}", active_msg_per_sec);
-            MDF_LOG_INFO("cpu_sec={}", cpu_sec);
-            MDF_LOG_INFO("cpu_us_per_msg={}", cpu_us_per_msg);
-            MDF_LOG_INFO("avg_bytes={}", avg_bytes);
-            if (args.log_payload) {
-                MDF_LOG_INFO("logged_payloads={}", log_handler.logged());
-            }
-            if (args.log_normalized) {
-                MDF_LOG_INFO("logged_normalized_events={}",
-                             quote_log_handler.logged);
-                MDF_LOG_INFO("normalized_failures={}",
-                             quote_log_handler.failures);
-            }
+            MDF_LOG_DEBUG(
+                "feed_stats attempts={} reconnects={} error_class={} "
+                "active_sec={} active_msg_per_sec={} cpu_sec={} "
+                "cpu_us_per_msg={} avg_bytes={}",
+                result.stats.attempts, result.stats.reconnects,
+                md::service::feed_error_class_name(
+                    result.stats.last_error_class),
+                active_sec, active_msg_per_sec, cpu_sec, cpu_us_per_msg,
+                avg_bytes);
             return result.ok() ? 0 : 1;
         }
     }

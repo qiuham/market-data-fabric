@@ -71,18 +71,36 @@ public:
 
     ++logged_;
     try {
-      if (options_.log_metadata) {
-        MDF_LOG_INFO(
-            "feed_message feed_id={} payload_size={} recv_ts_ns={}",
-            message.envelope.feed_id, message.envelope.payload_size,
-            message.envelope.recv_ts_ns);
-      }
+      std::string_view payload{};
+      bool truncated = false;
       if (options_.log_payload) {
-        const auto payload = payload_preview(message.payload);
-        if (payload.size() < message.payload.size()) {
-          MDF_LOG_INFO("feed_payload {}...", payload);
+        payload = payload_preview(message.payload);
+        truncated = payload.size() < message.payload.size();
+      }
+
+      if (options_.log_metadata) {
+        if (options_.log_payload) {
+          if (truncated) {
+            MDF_LOG_INFO(
+                "raw feed_id={} payload_size={} recv_ts_ns={} payload={}...",
+                message.envelope.feed_id, message.envelope.payload_size,
+                message.envelope.recv_ts_ns, payload);
+          } else {
+            MDF_LOG_INFO(
+                "raw feed_id={} payload_size={} recv_ts_ns={} payload={}",
+                message.envelope.feed_id, message.envelope.payload_size,
+                message.envelope.recv_ts_ns, payload);
+          }
         } else {
-          MDF_LOG_INFO("feed_payload {}", payload);
+          MDF_LOG_INFO("raw feed_id={} payload_size={} recv_ts_ns={}",
+                       message.envelope.feed_id, message.envelope.payload_size,
+                       message.envelope.recv_ts_ns);
+        }
+      } else if (options_.log_payload) {
+        if (truncated) {
+          MDF_LOG_INFO("raw payload={}...", payload);
+        } else {
+          MDF_LOG_INFO("raw payload={}", payload);
         }
       }
     } catch (...) {
