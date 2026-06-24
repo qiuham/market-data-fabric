@@ -276,22 +276,21 @@ struct BinanceQuoteLogHandler {
             message, *context, quote)) {
       ++failures;
       if (failures <= 3) {
-        MDF_LOG_WARN("normalized_quote_failed capture_seq={} feed_id={} "
-                     "payload_size={}",
-                     message.envelope.capture_seq, message.envelope.feed_id,
-                     message.envelope.payload_size);
+        MDF_LOG_WARN("normalized_quote_failed feed_id={} payload_size={} "
+                     "recv_ts_ns={}",
+                     message.envelope.feed_id, message.envelope.payload_size,
+                     message.envelope.recv_ts_ns);
       }
       return true;
     }
 
     ++logged;
     MDF_LOG_INFO(
-        "quote event={} instrument_id={} exchange_seq={} bid_price={} "
-        "bid_quantity={} ask_price={} ask_quantity={} capture_seq={} "
-        "recv_ts_ns={}",
-        logged, quote.header.instrument_id, quote.header.exchange_seq,
-        quote.bid_price, quote.bid_quantity, quote.ask_price,
-        quote.ask_quantity, quote.header.capture_seq, quote.header.recv_ts_ns);
+        "quote instrument_id={} exchange_seq={} bid_price={} "
+        "bid_quantity={} ask_price={} ask_quantity={} recv_ts_ns={}",
+        quote.header.instrument_id, quote.header.exchange_seq, quote.bid_price,
+        quote.bid_quantity, quote.ask_price, quote.ask_quantity,
+        quote.header.recv_ts_ns);
     return true;
   }
 };

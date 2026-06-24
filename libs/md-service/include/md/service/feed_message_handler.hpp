@@ -73,10 +73,9 @@ public:
     try {
       if (options_.log_metadata) {
         MDF_LOG_INFO(
-            "feed_message message={} capture_seq={} feed_id={} payload_size={} "
-            "recv_ts_ns={}",
-            seen_, message.envelope.capture_seq, message.envelope.feed_id,
-            message.envelope.payload_size, message.envelope.recv_ts_ns);
+            "feed_message feed_id={} payload_size={} recv_ts_ns={}",
+            message.envelope.feed_id, message.envelope.payload_size,
+            message.envelope.recv_ts_ns);
       }
       if (options_.log_payload) {
         const auto payload = payload_preview(message.payload);
