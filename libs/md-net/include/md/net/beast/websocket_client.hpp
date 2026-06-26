@@ -78,7 +78,7 @@ public:
     }
     if (!endpoint.tls) {
       result.status = WebSocketRunStatus::InvalidEndpoint;
-      result.error = "Beast backend currently supports wss:// endpoints";
+      result.error = "Beast backend 当前只支持 wss:// endpoint";
       result.ended_ns = steady_now_ns();
       return result;
     }
@@ -136,7 +136,7 @@ public:
       if (!SSL_set_tlsext_host_name(connection.next_layer().native_handle(),
                                     endpoint.host.c_str())) {
         result.status = WebSocketRunStatus::TlsHandshakeFailed;
-        result.error = "failed to set TLS SNI host name";
+        result.error = "设置 TLS SNI host name 失败";
         result.ended_ns = steady_now_ns();
         return result;
       }
@@ -251,8 +251,8 @@ public:
     (void)user_data;
     result.status = WebSocketRunStatus::BackendUnavailable;
     result.error =
-        "Boost.Beast WebSocket backend is unavailable; install Boost headers "
-        "and OpenSSL headers, or build with a different md-net backend";
+        "Boost.Beast WebSocket backend 不可用；请安装 Boost headers 和 "
+        "OpenSSL headers，或改用其他 md-net backend 构建";
     result.ended_ns = steady_now_ns();
     return result;
 #endif
@@ -262,4 +262,4 @@ private:
   WebSocketClientOptions options_{};
 };
 
-} // namespace md::net::beast
+} // 命名空间 md::net::beast

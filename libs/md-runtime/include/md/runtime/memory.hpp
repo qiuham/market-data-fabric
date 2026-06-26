@@ -22,4 +22,4 @@ enum class MemoryResult : std::uint8_t {
 
 MemoryResult apply_memory_profile(const MemoryProfile& profile) noexcept;
 
-} // namespace md::runtime
+} // 命名空间 md::runtime

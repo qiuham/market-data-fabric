@@ -28,7 +28,7 @@ md::service::FeedRunAttemptResult attempt_result(
   return result;
 }
 
-} // namespace
+} // 匿名命名空间
 
 int main() {
   {

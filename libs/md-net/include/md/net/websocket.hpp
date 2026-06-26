@@ -30,7 +30,7 @@ struct WebSocketClientOptions {
 
 struct WebSocketMessageView {
   std::uint64_t recv_ts_ns{};
-  // The payload view is valid only until the callback returns.
+  // payload 视图只在回调返回前有效。
   std::string_view payload{};
   bool binary{false};
 };
@@ -86,11 +86,11 @@ inline WebSocketEndpoint parse_websocket_endpoint(std::string_view url) {
     endpoint.port = "80";
     rest = url.substr(ws_prefix.size());
   } else {
-    throw std::invalid_argument("WebSocket URL must start with ws:// or wss://");
+    throw std::invalid_argument("WebSocket URL 必须以 ws:// 或 wss:// 开头");
   }
 
   if (rest.empty()) {
-    throw std::invalid_argument("WebSocket URL host must not be empty");
+    throw std::invalid_argument("WebSocket URL host 不能为空");
   }
 
   const auto path_pos = rest.find('/');
@@ -101,7 +101,7 @@ inline WebSocketEndpoint parse_websocket_endpoint(std::string_view url) {
                         ? "/"
                         : std::string(rest.substr(path_pos));
   if (authority.empty()) {
-    throw std::invalid_argument("WebSocket URL host must not be empty");
+    throw std::invalid_argument("WebSocket URL host 不能为空");
   }
 
   const auto port_pos = authority.rfind(':');
@@ -109,7 +109,7 @@ inline WebSocketEndpoint parse_websocket_endpoint(std::string_view url) {
     endpoint.host = std::string(authority.substr(0, port_pos));
     endpoint.port = std::string(authority.substr(port_pos + 1));
     if (endpoint.host.empty() || endpoint.port.empty()) {
-      throw std::invalid_argument("WebSocket URL host or port is empty");
+      throw std::invalid_argument("WebSocket URL host 或 port 不能为空");
     }
   } else {
     endpoint.host = std::string(authority);
@@ -128,4 +128,4 @@ inline std::string make_host_header(const WebSocketEndpoint &endpoint) {
   return endpoint.host + ":" + endpoint.port;
 }
 
-} // namespace md::net
+} // 命名空间 md::net

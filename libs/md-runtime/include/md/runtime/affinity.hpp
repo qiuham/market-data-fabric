@@ -16,8 +16,8 @@ enum class AffinityResult : std::uint8_t {
     SystemError,
 };
 
-// Implementations should be OS-specific. Linux can use pthread_setaffinity_np;
-// Non-Linux development builds can return Unsupported without affecting md-core.
+// 实现应按操作系统区分。Linux 可以使用 pthread_setaffinity_np；
+// 非 Linux 开发构建可以返回 Unsupported，不影响 md-core。
 AffinityResult pin_current_thread(const CpuSetConfig& config) noexcept;
 
-} // namespace md::runtime
+} // 命名空间 md::runtime

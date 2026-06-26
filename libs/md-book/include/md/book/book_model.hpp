@@ -11,4 +11,4 @@ enum class BookModel : std::uint8_t {
     L3Mbo = 3,
 };
 
-} // namespace md::book
+} // 命名空间 md::book

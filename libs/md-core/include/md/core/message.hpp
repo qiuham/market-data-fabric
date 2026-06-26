@@ -159,4 +159,4 @@ template <std::size_t MaxBytes>
   return true;
 }
 
-} // namespace md::core
+} // 命名空间 md::core

@@ -23,4 +23,4 @@ public:
     virtual std::uint64_t now_ns() const noexcept = 0;
 };
 
-} // namespace md::runtime
+} // 命名空间 md::runtime

@@ -66,7 +66,7 @@ struct FeedRunAttemptResult {
 };
 
 struct FeedRetryPolicy {
-  // 0 means unlimited attempts. Keep default at 1 for CLI/debug commands.
+  // 0 表示无限重试；CLI/调试命令默认只尝试 1 次。
   std::uint32_t max_attempts{1};
   std::chrono::milliseconds initial_backoff{std::chrono::milliseconds{250}};
   std::chrono::milliseconds max_backoff{std::chrono::seconds{30}};
@@ -316,7 +316,7 @@ inline bool on_feed_session_message(const md::core::FeedMessageView &message,
   return true;
 }
 
-} // namespace detail
+} // 命名空间 detail
 
 template <typename RunOnce>
 FeedSessionResult run_feed_session(const FeedSessionOptions &options,
@@ -404,4 +404,4 @@ FeedSessionResult run_feed_session(const FeedSessionOptions &options,
   }
 }
 
-} // namespace md::service
+} // 命名空间 md::service

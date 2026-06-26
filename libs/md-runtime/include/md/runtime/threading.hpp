@@ -29,4 +29,4 @@ struct ThreadProfile {
     std::int16_t priority{};
 };
 
-} // namespace md::runtime
+} // 命名空间 md::runtime

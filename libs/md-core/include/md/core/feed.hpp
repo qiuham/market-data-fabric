@@ -67,7 +67,7 @@ enum class FeedSpeed : std::uint16_t {
 struct FeedSpec {
   VenueId venue{VenueId::Unknown};
   MarketSegment market{MarketSegment::Unknown};
-  // Empty symbols, "*" or "ALL" mean the provider's full-market feed/universe.
+  // 空 symbols、"*" 或 "ALL" 表示 provider 的全市场 feed/universe。
   std::vector<std::string> symbols{};
   FeedKind kind{FeedKind::Unknown};
   FeedDepth depth{FeedDepth::Unknown};
@@ -96,7 +96,7 @@ struct FeedConnectionSpec {
 
 struct FeedMessageView {
   MessageEnvelope envelope{};
-  // The payload view is valid only until the callback returns.
+  // payload 视图只在回调返回前有效。
   std::string_view payload{};
 };
 
@@ -170,4 +170,4 @@ inline MessageEnvelope make_connection_envelope(
   return envelope;
 }
 
-} // namespace md::core
+} // 命名空间 md::core

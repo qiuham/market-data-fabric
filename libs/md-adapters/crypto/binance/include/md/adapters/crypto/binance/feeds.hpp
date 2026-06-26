@@ -22,7 +22,7 @@ enum class BinanceEnvironment : std::uint8_t {
 
 struct BinanceFeedSpec {
   md::core::MarketSegment market{md::core::MarketSegment::Spot};
-  // Empty, "*" or "ALL" means the provider's full-market feed/universe.
+  // 空、"*" 或 "ALL" 表示 provider 的全市场 feed/universe。
   std::vector<std::string> symbols{};
   md::core::FeedKind kind{md::core::FeedKind::Trade};
   md::core::FeedDepth depth{md::core::FeedDepth::Unknown};
@@ -36,7 +36,7 @@ using BinanceConnectionSpec = md::core::FeedConnectionSpec;
 
 inline std::string normalize_symbol(std::string_view symbol) {
   if (symbol.empty()) {
-    throw std::invalid_argument("Binance symbol must not be empty");
+    throw std::invalid_argument("Binance symbol 不能为空");
   }
 
   std::string normalized(symbol);
@@ -61,7 +61,7 @@ inline void require_supported_market(md::core::MarketSegment market) {
       market != md::core::MarketSegment::LinearDerivative &&
       market != md::core::MarketSegment::InverseDerivative &&
       market != md::core::MarketSegment::Option) {
-    throw std::invalid_argument("Unsupported Binance market segment");
+    throw std::invalid_argument("不支持的 Binance market segment");
   }
 }
 
@@ -77,7 +77,7 @@ inline std::string speed_suffix(md::core::FeedSpeed speed) {
   case md::core::FeedSpeed::Ms500:
     return "@500ms";
   default:
-    throw std::invalid_argument("Unsupported Binance feed speed");
+    throw std::invalid_argument("不支持的 Binance feed speed");
   }
 }
 
@@ -88,7 +88,7 @@ inline std::uint16_t depth_levels(md::core::FeedDepth depth) {
   case md::core::FeedDepth::Top20:
     return static_cast<std::uint16_t>(depth);
   default:
-    throw std::invalid_argument("Unsupported Binance partial book depth");
+    throw std::invalid_argument("不支持的 Binance partial book depth");
   }
 }
 
@@ -118,7 +118,7 @@ inline std::string make_provider_feed_key(const BinanceFeedSpec &spec,
     key += speed_suffix(spec.speed);
     break;
   default:
-    throw std::invalid_argument("Unsupported Binance feed kind");
+    throw std::invalid_argument("不支持的 Binance feed kind");
   }
   return key;
 }
@@ -132,8 +132,8 @@ inline std::string make_all_symbols_provider_feed_key(
   }
 
   throw std::invalid_argument(
-      "Binance all-symbol feed currently requires a provider aggregate feed; "
-      "use TopOfBook or expand the universe before resolving this feed kind");
+      "Binance 全市场 feed 当前要求 provider 支持聚合 feed；"
+      "请使用 TopOfBook，或在解析 feed kind 前展开 universe");
 }
 
 inline BinanceResolvedFeed resolve_symbol_feed(const BinanceFeedSpec &spec,
@@ -184,7 +184,7 @@ inline std::vector<BinanceResolvedFeed> resolve_feeds(
   for (const auto &symbol : spec.symbols) {
     if (md::core::is_all_symbol_token(symbol)) {
       throw std::invalid_argument(
-          "Binance ALL symbol token must be the only symbol in the list");
+          "Binance ALL symbol token 必须是列表里唯一的 symbol");
     }
     feeds.push_back(resolve_symbol_feed(spec, symbol));
   }
@@ -195,7 +195,7 @@ inline BinanceResolvedFeed resolve_feed(const BinanceFeedSpec &spec) {
   const auto feeds = resolve_feeds(spec);
   if (feeds.size() != 1) {
     throw std::invalid_argument(
-        "resolve_feed requires exactly one resolved Binance feed");
+        "resolve_feed 要求只有一个已解析的 Binance feed");
   }
   return feeds.front();
 }
@@ -226,7 +226,7 @@ inline std::string make_endpoint_base(md::core::MarketSegment market,
   if (environment == BinanceEnvironment::Testnet ||
       environment == BinanceEnvironment::Demo) {
     throw std::invalid_argument(
-        "Binance non-spot non-production endpoints are not configured");
+        "Binance 非 spot 的非生产 endpoint 尚未配置");
   }
 
   if (market == md::core::MarketSegment::LinearDerivative) {
@@ -242,21 +242,21 @@ inline std::string make_endpoint_base(md::core::MarketSegment market,
                       : "wss://fstream.binance.com/public/ws/";
   }
 
-  throw std::invalid_argument("Unsupported Binance market endpoint");
+  throw std::invalid_argument("不支持的 Binance market endpoint");
 }
 
 inline BinanceConnectionSpec make_connection_spec(
     std::uint32_t connection_id, BinanceEnvironment environment,
     const std::vector<BinanceResolvedFeed> &feeds) {
   if (feeds.empty()) {
-    throw std::invalid_argument("Binance feed list must not be empty");
+    throw std::invalid_argument("Binance feed 列表不能为空");
   }
 
   const auto market = feeds.front().spec.market;
   for (const auto &feed : feeds) {
     if (feed.spec.market != market) {
       throw std::invalid_argument(
-          "Binance feeds in one connection must use the same market segment");
+          "同一个 Binance connection 内的 feeds 必须使用相同 market segment");
     }
   }
 
@@ -289,4 +289,4 @@ inline BinanceConnectionSpec make_connection_spec(
   return make_connection_spec(connection_id, environment, resolve_feeds(spec));
 }
 
-} // namespace md::adapters::crypto::binance
+} // 命名空间 md::adapters::crypto::binance

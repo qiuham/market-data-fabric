@@ -1,7 +1,7 @@
 #pragma once
 
 #include "md/adapters/crypto/binance/feeds.hpp"
-#include "md/adapters/crypto/binance/json_fields.hpp"
+#include "md/adapters/crypto/binance/detail/json_value_reader.hpp"
 #include "md/core/events.hpp"
 #include "md/core/fixed_point.hpp"
 
@@ -90,4 +90,4 @@ struct BinanceBookTickerMappingContext {
   return true;
 }
 
-} // namespace md::adapters::crypto::binance
+} // 命名空间 md::adapters::crypto::binance

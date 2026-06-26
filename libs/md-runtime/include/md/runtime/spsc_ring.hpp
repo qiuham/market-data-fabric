@@ -15,8 +15,8 @@ template <std::size_t Value>
 inline constexpr bool is_power_of_two_v = Value != 0 &&
                                           (Value & (Value - 1)) == 0;
 
-// Single-producer single-consumer ring buffer. Only one thread may call push
-// APIs, and only one other thread may call pop APIs.
+// 单生产者单消费者 ring buffer。只能有一个线程调用 push API，
+// 也只能有另一个线程调用 pop API。
 template <typename T, std::size_t Capacity> class SpscRing {
   static_assert(Capacity >= 2, "SpscRing capacity must be at least 2");
   static_assert(is_power_of_two_v<Capacity>,
@@ -111,4 +111,4 @@ private:
   PaddedAtomicIndex read_index_{};
 };
 
-} // namespace md::runtime
+} // 命名空间 md::runtime

@@ -121,7 +121,7 @@ inline void append_formatted(std::ostringstream &out, std::string_view fmt,
 }
 #endif
 
-} // namespace detail
+} // 命名空间 detail
 
 #if MDF_RUNTIME_ENABLE_QUILL
 inline quill::Logger *logger() {
@@ -175,7 +175,7 @@ inline void fallback_log(LogLevel level, std::string_view fmt,
 }
 #endif
 
-} // namespace md::runtime
+} // 命名空间 md::runtime
 
 #if MDF_RUNTIME_ENABLE_QUILL
 #define MDF_LOG_TRACE(fmt, ...)                                                     \

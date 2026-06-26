@@ -152,4 +152,4 @@ namespace md::adapters::crypto::binance::detail {
   return true;
 }
 
-} // namespace md::adapters::crypto::binance::detail
+} // 命名空间 md::adapters::crypto::binance::detail

@@ -24,4 +24,4 @@ private:
     Impl& impl() { return static_cast<Impl&>(*this); }
 };
 
-} // namespace md::core
+} // 命名空间 md::core

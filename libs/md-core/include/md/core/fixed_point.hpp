@@ -94,4 +94,4 @@ inline constexpr std::int32_t kMaxFixedPointScale = 18;
   return true;
 }
 
-} // namespace md::core
+} // 命名空间 md::core

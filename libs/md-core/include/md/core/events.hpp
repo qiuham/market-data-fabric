@@ -73,7 +73,7 @@ struct Trade {
   std::int64_t price{};
   std::int64_t quantity{};
   std::uint64_t trade_id{};
-  // Taker/aggressor side. Provider maker-side fields must be inverted by mapper.
+  // Taker/aggressor 方向；provider 的 maker-side 字段需要在 mapper 里反转。
   AggressorSide aggressor_side{AggressorSide::Unknown};
   std::uint8_t condition{};
 };
@@ -167,8 +167,8 @@ template <std::size_t MaxLevels = 128> struct BookUpdate {
   void clear_levels() noexcept { level_count = 0; }
 };
 
-// Compatibility helper for single-level producers; provider depth messages should
-// use BookUpdate so sequence/checksum metadata stays at message scope.
+// 单档 producer 的兼容辅助函数；provider 深度消息应使用 BookUpdate，
+// 这样 sequence/checksum 元数据才能留在消息级别。
 struct BookDelta {
   MdHeader header{.payload_kind = PayloadKind::BookUpdate,
                   .payload_encoding = PayloadEncoding::MdStruct};
@@ -236,4 +236,4 @@ struct Status {
   std::uint32_t reason_code{};
 };
 
-} // namespace md::core
+} // 命名空间 md::core

@@ -9,12 +9,12 @@
 
 namespace md::adapters::crypto::binance {
 
-struct BinanceFeedClientOptions {
+struct BinanceWebSocketFeedClientOptions {
   md::net::WebSocketClientOptions websocket{};
   std::uint64_t max_messages{};
 };
 
-struct BinanceFeedClientRunResult {
+struct BinanceWebSocketFeedClientRunResult {
   md::net::WebSocketRunResult websocket{};
   std::uint64_t messages{};
   std::uint64_t bytes{};
@@ -24,10 +24,10 @@ struct BinanceFeedClientRunResult {
   [[nodiscard]] bool ok() const noexcept { return websocket.ok(); }
 };
 
-class BinanceFeedClient {
+class BinanceWebSocketFeedClient {
 public:
-  explicit BinanceFeedClient(BinanceConnectionSpec connection_spec,
-                             BinanceFeedClientOptions options = {})
+  explicit BinanceWebSocketFeedClient(BinanceConnectionSpec connection_spec,
+                                      BinanceWebSocketFeedClientOptions options = {})
       : connection_spec_(std::move(connection_spec)),
         options_(std::move(options)) {}
 
@@ -35,18 +35,18 @@ public:
     return connection_spec_;
   }
 
-  [[nodiscard]] const BinanceFeedClientOptions &options() const noexcept {
+  [[nodiscard]] const BinanceWebSocketFeedClientOptions &options() const noexcept {
     return options_;
   }
 
-  BinanceFeedClientRunResult run(md::core::FeedMessageHandler handler,
-                                 void *user_data = nullptr) {
+  BinanceWebSocketFeedClientRunResult
+  run(md::core::FeedMessageHandler handler, void *user_data = nullptr) {
     if (connection_spec_.feeds.empty()) {
-      BinanceFeedClientRunResult result{};
+      BinanceWebSocketFeedClientRunResult result{};
       result.websocket.status = md::net::WebSocketRunStatus::InvalidEndpoint;
       result.websocket.started_ns = md::net::steady_now_ns();
       result.websocket.ended_ns = result.websocket.started_ns;
-      result.websocket.error = "BinanceFeedClient requires at least one feed";
+      result.websocket.error = "BinanceWebSocketFeedClient 至少需要一个 feed";
       return result;
     }
 
@@ -60,10 +60,10 @@ public:
     state.user_data = user_data;
 
     md::net::beast::WebSocketClient websocket{options_.websocket};
-    BinanceFeedClientRunResult result{};
+    BinanceWebSocketFeedClientRunResult result{};
     result.websocket =
         websocket.run(connection_spec_.endpoint, connection_spec_.startup_messages,
-                      &BinanceFeedClient::on_message,
+                      &BinanceWebSocketFeedClient::on_message,
                       static_cast<void *>(&state));
     result.messages = state.messages;
     result.bytes = state.bytes;
@@ -76,7 +76,7 @@ private:
   struct CallbackState {
     const BinanceConnectionSpec *connection{};
     const BinanceResolvedFeed *feed{};
-    const BinanceFeedClientOptions *options{};
+    const BinanceWebSocketFeedClientOptions *options{};
     md::core::FeedMessageHandler handler{};
     void *user_data{};
     std::uint64_t messages{};
@@ -128,7 +128,7 @@ private:
   }
 
   BinanceConnectionSpec connection_spec_{};
-  BinanceFeedClientOptions options_{};
+  BinanceWebSocketFeedClientOptions options_{};
 };
 
-} // namespace md::adapters::crypto::binance
+} // 命名空间 md::adapters::crypto::binance

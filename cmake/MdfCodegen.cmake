@@ -1,9 +1,8 @@
-# Codegen hook placeholder.
+# Codegen 预留入口。
 #
-# This file intentionally does not run any generator today. It documents the
-# future CMake integration point for build-time code generation.
+# 当前不会实际运行 generator；这里只记录未来接入构建期 codegen 的 CMake 位置。
 #
-# Future shape:
+# 未来形态：
 #   mdf_add_codegen_target(
 #     TARGET md-adapter-binance-generated
 #     INPUT  ${CMAKE_SOURCE_DIR}/path/to/provider.ir.json
@@ -11,5 +10,5 @@
 #   )
 
 function(mdf_add_codegen_target)
-  message(FATAL_ERROR "mdf_add_codegen_target is reserved but not implemented yet")
+  message(FATAL_ERROR "mdf_add_codegen_target 是预留入口，当前尚未实现")
 endfunction()
