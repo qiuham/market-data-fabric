@@ -32,6 +32,7 @@
 - 启动、停止、重连、异常保留摘要日志；高频运行状态使用轻量运行指标统计，不靠逐条日志。
 - `FeedMessageHandler` 只保留回调绑定和分发；调试 payload 日志独立为 `FeedPayloadLogHandler`，不再混在消息分发里。
 - Binance adapter 已把 feed spec、WebSocket client、mapper、轻量 JSON 字段读取拆开，避免一个文件同时承担连接、解析和标准化职责。
+- `apps/md-node` 已把通用入口、CLI options 和 Binance live runner 拆开，入口只做日志初始化和命令分发。
 - 本地 smoke tests 覆盖核心事件、Binance feed、mapper、session、WebSocket endpoint 和 SPSC ring。
 
 ## 仓库结构
@@ -60,7 +61,7 @@ tests/                                smoke tests
 - `md-service` 只负责 session、重连、handler chain、统计和调试日志，不解析交易所 payload。
 - `md-adapters/{asset_class}/{provider}` 放 provider feed key、client、decoder/mapper 和 provider 语义。
 - mapper context 先保留在具体 provider adapter；等 OKX / Bybit / Coinbase 至少两个以上 adapter 出现相同字段，再提公共 helper，避免现在抽太早导致后面难维护。
-- `apps/md-node` 目前还承担 CLI 参数解析和 Binance live 预览编排；下一步会把 Binance live CLI runner 从 `main.cpp` 拆出去，让入口只负责选择命令。
+- `apps/md-node` 的 `main.cpp` 只负责日志初始化和命令分发；Binance live/preview 编排放在 `binance_live_runner.cpp`，通用 CLI 解析 helper 放在 `cli_options.hpp`。
 
 ## 数据面
 
@@ -137,13 +138,12 @@ ctest --test-dir cmake-build-debug --output-on-failure
 ## 当前路线图
 
 1. 实现 Binance `depth -> BookUpdate`，保留 message 级序号、prev seq 和 checksum。
-2. 拆出 `apps/md-node` 的 Binance live runner，让 CLI 入口、feed client、session、mapper handler 边界更清楚。
-3. 建立 adapter -> mapper -> normalized event 的 gateway pipeline，feed 线程只做轻量接收和投递。
-4. 加入 publisher/client，先服务实时消费。
-5. 扩展 OKX、Bybit、Coinbase、Kraken、Gate.io 等 crypto adapter，并用多个 adapter 的真实重复需求决定公共 mapper context/helper。
-6. 接入股票、期货等市场时复用核心事件，只扩展 refdata 和特殊事件。
-7. 后续如需要再把 Binance / OKX 的聚合成交作为 `AggregateTrade` 或带 aggregated 标记的可选事件处理。
-8. 等 live、mapper 和传输层稳定后，再补历史回放和持久化日志。
+2. 建立 adapter -> mapper -> normalized event 的 gateway pipeline，feed 线程只做轻量接收和投递。
+3. 加入 publisher/client，先服务实时消费。
+4. 扩展 OKX、Bybit、Coinbase、Kraken、Gate.io 等 crypto adapter，并用多个 adapter 的真实重复需求决定公共 mapper context/helper。
+5. 接入股票、期货等市场时复用核心事件，只扩展 refdata 和特殊事件。
+6. 后续如需要再把 Binance / OKX 的聚合成交作为 `AggregateTrade` 或带 aggregated 标记的可选事件处理。
+7. 等 live、mapper 和传输层稳定后，再补历史回放和持久化日志。
 
 ## 更多文档
 

@@ -73,7 +73,9 @@ target_include_directories(md-client-core INTERFACE libs/md-client/core/include)
 target_link_libraries(md-client-core INTERFACE md-core)
 
 if (MDF_BUILD_APPS)
-  add_executable(md-node apps/md-node/src/main.cpp)
+  add_executable(md-node
+                 apps/md-node/src/main.cpp
+                 apps/md-node/src/binance_live_runner.cpp)
   target_link_libraries(md-node PRIVATE md-core md-refdata md-book md-runtime md-service md-client-core md-adapters-binance)
 endif()
 
