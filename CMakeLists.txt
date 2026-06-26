@@ -94,6 +94,12 @@ if (MDF_BUILD_TESTS)
   add_test(NAME binance_book_ticker_mapper_smoke
            COMMAND mdf-binance-book-ticker-mapper-smoke)
 
+  add_executable(mdf-binance-trade-mapper-smoke
+                 tests/binance_trade_mapper_smoke.cpp)
+  target_link_libraries(mdf-binance-trade-mapper-smoke PRIVATE md-adapters-binance)
+  add_test(NAME binance_trade_mapper_smoke
+           COMMAND mdf-binance-trade-mapper-smoke)
+
   add_executable(mdf-core-events-smoke tests/core_events_smoke.cpp)
   target_link_libraries(mdf-core-events-smoke PRIVATE md-core md-refdata)
   add_test(NAME core_events_smoke COMMAND mdf-core-events-smoke)

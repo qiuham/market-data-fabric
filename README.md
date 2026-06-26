@@ -16,15 +16,16 @@
 
 - `md-core`：`MessageEnvelope`、`RawProviderMessage`、`Trade`、`Quote`、`BookUpdate`、`BookSnapshot`、`OrderEvent`、`Execution` 等核心类型。
 - `md-refdata`：`Instrument`、`AssetClass`、`ProductType`、精度、标的、到期日等基础参考数据字段。
-- `md-adapters/crypto/binance`：Binance feed key、endpoint、WebSocket live raw client 和 `bookTicker -> Quote` mapper。
+- `md-adapters/crypto/binance`：Binance feed key、endpoint、WebSocket live raw client、`bookTicker -> Quote` 和 `trade -> Trade` mapper。
 - `md-service`：feed session、重连/backoff、停止条件和基础运行统计。
 - `md-runtime`：SPSC ring、统一日志封装等低延迟基础设施。
 - `md-net`：WebSocket endpoint 解析和 Boost.Beast backend。
 
 ## 当前进度
 
-- Binance Spot `bookTicker` 已完成 live raw 接入和 `Quote` 标准化映射。
-- `bookTicker -> Quote` 已用 Binance 在线 BTCUSDT 数据验证，能同时查看 raw payload 和 normalized quote。
+- Binance Spot `bookTicker` / `trade` 已完成 live raw 接入和标准化映射。
+- `bookTicker -> Quote` 和 `trade -> Trade` 已用 Binance 在线 BTCUSDT 数据验证。
+- `aggTrade` 暂不作为当前标准化目标，后续如需要再按聚合成交单独处理。
 - mapper 使用固定点整数解析价格和数量，不走 `double`，避免精度误差和额外开销。
 - `--normalize` 可以只执行 mapper 和统计成功/失败，不输出逐条行情日志。
 - `--log-payload` / `--log-normalized` 只用于调试 mapper 和字段检查，不作为生产路径常开选项。
@@ -86,7 +87,7 @@ external feed / SDK
 支持生成和连接这些 Spot feed：
 
 - `trade`
-- `aggTrade`
+- `aggTrade` raw feed key 预留；暂不做默认 mapper
 - `bookTicker`
 - `!bookTicker`
 - `depth`
@@ -98,13 +99,14 @@ external feed / SDK
 ```bash
 ./cmake-build-debug/md-node --binance-feed-spec-preview
 ./cmake-build-debug/md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --normalize
+./cmake-build-debug/md-node --binance-live --symbol=BTCUSDT --feed=trade --messages=3 --normalize
 ./cmake-build-debug/md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --messages=3 --log-normalized=3
 ```
 
 生产或长时间运行时不要打开逐条 payload / normalized 日志，建议只保留 warn 以上日志：
 
 ```bash
-./md-node --binance-live --symbol=BTCUSDT --feed=bookTicker --normalize --log-level=warn
+./md-node --binance-live --symbol=BTCUSDT --feed=trade --normalize --log-level=warn
 ```
 
 ## 构建和测试
@@ -121,12 +123,12 @@ ctest --test-dir cmake-build-debug --output-on-failure
 
 ## 当前路线图
 
-1. 继续实现 Binance mapper：`trade/aggTrade -> Trade`。
-2. 实现 Binance `depth -> BookUpdate`，保留 message 级序号、prev seq 和 checksum。
-3. 建立 adapter -> mapper -> normalized event 的 gateway pipeline，feed 线程只做轻量接收和投递。
-4. 加入 publisher/client，先服务实时消费。
-5. 扩展 OKX、Bybit、Coinbase、Kraken、Gate.io 等 crypto adapter。
-6. 接入股票、期货等市场时复用核心事件，只扩展 refdata 和特殊事件。
+1. 实现 Binance `depth -> BookUpdate`，保留 message 级序号、prev seq 和 checksum。
+2. 建立 adapter -> mapper -> normalized event 的 gateway pipeline，feed 线程只做轻量接收和投递。
+3. 加入 publisher/client，先服务实时消费。
+4. 扩展 OKX、Bybit、Coinbase、Kraken、Gate.io 等 crypto adapter。
+5. 接入股票、期货等市场时复用核心事件，只扩展 refdata 和特殊事件。
+6. 后续如需要再把 Binance / OKX 的聚合成交作为 `AggregateTrade` 或带 aggregated 标记的可选事件处理。
 7. 等 live、mapper 和传输层稳定后，再补历史回放和持久化日志。
 
 ## 更多文档
