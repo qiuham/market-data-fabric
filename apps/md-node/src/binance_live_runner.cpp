@@ -1,9 +1,8 @@
 #include "binance_live_runner.hpp"
 
-#include "cli_options.hpp"
+#include "binance_live_options.hpp"
+#include "binance_mapper_handlers.hpp"
 
-#include "md/adapters/crypto/binance/book_ticker_mapper.hpp"
-#include "md/adapters/crypto/binance/trade_mapper.hpp"
 #include "md/adapters/crypto/binance/websocket_feed_client.hpp"
 #include "md/runtime/logging.hpp"
 #include "md/service/feed_message_handler.hpp"
@@ -11,80 +10,18 @@
 #include "md/service/feed_session.hpp"
 #include "md/service/mapper_stats.hpp"
 
-#include <array>
 #include <atomic>
 #include <chrono>
 #include <csignal>
-#include <cstddef>
 #include <ctime>
-#include <string>
 #include <string_view>
-#include <vector>
 
 namespace md::apps::md_node {
 namespace {
 
 namespace binance = md::adapters::crypto::binance;
-using FeedKind = md::core::FeedKind;
-
-struct FeedKindCliEntry {
-  std::string_view name;
-  FeedKind kind;
-  bool supports_normalize{};
-};
-
-inline constexpr auto kFeedKindCliEntries =
-    std::to_array<FeedKindCliEntry>({
-        {"trade", FeedKind::Trade, true},
-        {"aggTrade", FeedKind::AggregateTrade, false},
-        {"bookTicker", FeedKind::TopOfBook, true},
-        {"depth", FeedKind::BookUpdate, false},
-        {"depth20", FeedKind::BookSnapshot, false},
-    });
-
-struct BinanceLiveArgs {
-  std::vector<std::string> symbols{"BTCUSDT"};
-  FeedKind feed_kind{FeedKind::TopOfBook};
-  std::uint64_t max_messages{250};
-  std::uint64_t log_payloads{};
-  std::uint64_t log_normalized_events{};
-  std::size_t payload_preview_bytes{512};
-  std::uint32_t max_attempts{1};
-  std::uint64_t backoff_ms{250};
-  std::uint64_t max_backoff_ms{30000};
-  std::uint64_t idle_timeout_ms{30000};
-  bool normalize{};
-  bool log_payload{};
-  bool log_normalized{};
-  bool reconnect_on_completed{};
-};
 
 std::atomic_bool g_stop_requested{false};
-
-[[nodiscard]] bool parse_feed_kind(std::string_view text,
-                                   FeedKind &feed_kind) noexcept {
-  for (const auto &entry : kFeedKindCliEntries) {
-    if (text == entry.name) {
-      feed_kind = entry.kind;
-      return true;
-    }
-  }
-  return false;
-}
-
-[[nodiscard]] std::string feed_kind_usage(bool normalize_only) {
-  std::string usage{};
-  for (const auto &entry : kFeedKindCliEntries) {
-    if (normalize_only && !entry.supports_normalize) {
-      continue;
-    }
-    if (!usage.empty()) {
-      usage += '|';
-    }
-    usage += entry.name;
-  }
-  return usage;
-}
 
 [[nodiscard]] std::string_view
 feed_key_label(const md::core::FeedConnectionSpec &connection) noexcept {
@@ -97,280 +34,41 @@ feed_key_label(const md::core::FeedConnectionSpec &connection) noexcept {
   return connection.feeds.front().provider_feed_key;
 }
 
-[[nodiscard]] const char *
-aggressor_side_name(md::core::AggressorSide side) noexcept {
-  switch (side) {
-  case md::core::AggressorSide::Buy:
-    return "buy";
-  case md::core::AggressorSide::Sell:
-    return "sell";
-  case md::core::AggressorSide::None:
-    return "none";
-  case md::core::AggressorSide::Unknown:
-    return "unknown";
-  }
-  return "unknown";
-}
-
-[[nodiscard]] std::uint32_t
-make_binance_spot_instrument_id(std::string_view provider_symbol) {
-  const auto seed = "binance:spot:" + std::string(provider_symbol);
-  return md::core::stable_id32(seed);
-}
-
-[[nodiscard]] std::vector<std::string> parse_symbol_list(std::string_view text) {
-  std::vector<std::string> symbols{};
-  std::size_t start = 0;
-  while (start <= text.size()) {
-    const auto comma = text.find(',', start);
-    const auto end = comma == std::string_view::npos ? text.size() : comma;
-    if (end > start) {
-      symbols.emplace_back(text.substr(start, end - start));
-    }
-    if (comma == std::string_view::npos) {
-      break;
-    }
-    start = comma + 1;
-  }
-  return symbols;
-}
-
-[[nodiscard]] BinanceLiveArgs parse_binance_live_args(int argc, char **argv) {
-  BinanceLiveArgs args{};
-  for (int i = 1; i < argc; ++i) {
-    const std::string_view arg{argv[i]};
-    if (const auto value = option_value(arg, "--symbol="); !value.empty()) {
-      args.symbols = {std::string(value)};
-      continue;
-    }
-    if (const auto value = option_value(arg, "--symbols="); !value.empty()) {
-      const auto symbols = parse_symbol_list(value);
-      if (!symbols.empty()) {
-        args.symbols = symbols;
-      }
-      continue;
-    }
-    if (const auto value = option_value(arg, "--feed="); !value.empty()) {
-      FeedKind feed_kind{};
-      if (parse_feed_kind(value, feed_kind)) {
-        args.feed_kind = feed_kind;
-      }
-      continue;
-    }
-    if (const auto value = option_value(arg, "--messages="); !value.empty()) {
-      std::uint64_t max_messages = 0;
-      if (parse_u64(value, max_messages)) {
-        args.max_messages = max_messages;
-      }
-      continue;
-    }
-    if (arg == "--normalize") {
-      args.normalize = true;
-      continue;
-    }
-    if (arg == "--log-payload") {
-      args.log_payload = true;
-      args.log_payloads = 5;
-      continue;
-    }
-    if (const auto value = option_value(arg, "--log-payload=");
-        !value.empty()) {
-      std::uint64_t log_payloads = 0;
-      if (parse_u64(value, log_payloads)) {
-        args.log_payload = true;
-        args.log_payloads = log_payloads;
-      }
-      continue;
-    }
-    if (arg == "--log-normalized") {
-      args.normalize = true;
-      args.log_normalized = true;
-      args.log_normalized_events = 5;
-      continue;
-    }
-    if (const auto value = option_value(arg, "--log-normalized=");
-        !value.empty()) {
-      std::uint64_t log_normalized_events = 0;
-      if (parse_u64(value, log_normalized_events)) {
-        args.normalize = true;
-        args.log_normalized = true;
-        args.log_normalized_events = log_normalized_events;
-      }
-      continue;
-    }
-    if (const auto value = option_value(arg, "--payload-bytes=");
-        !value.empty()) {
-      std::uint64_t payload_preview_bytes = 0;
-      if (parse_u64(value, payload_preview_bytes)) {
-        args.payload_preview_bytes =
-            static_cast<std::size_t>(payload_preview_bytes);
-      }
-      continue;
-    }
-    if (arg == "--reconnect") {
-      args.max_attempts = 0;
-      continue;
-    }
-    if (arg == "--reconnect-completed") {
-      args.reconnect_on_completed = true;
-      continue;
-    }
-    if (const auto value = option_value(arg, "--max-attempts=");
-        !value.empty()) {
-      std::uint64_t max_attempts = 0;
-      if (parse_u64(value, max_attempts)) {
-        args.max_attempts = static_cast<std::uint32_t>(max_attempts);
-      }
-      continue;
-    }
-    if (const auto value = option_value(arg, "--backoff-ms=");
-        !value.empty()) {
-      std::uint64_t backoff_ms = 0;
-      if (parse_u64(value, backoff_ms)) {
-        args.backoff_ms = backoff_ms;
-      }
-      continue;
-    }
-    if (const auto value = option_value(arg, "--max-backoff-ms=");
-        !value.empty()) {
-      std::uint64_t max_backoff_ms = 0;
-      if (parse_u64(value, max_backoff_ms)) {
-        args.max_backoff_ms = max_backoff_ms;
-      }
-      continue;
-    }
-    if (const auto value = option_value(arg, "--idle-timeout-ms=");
-        !value.empty()) {
-      std::uint64_t idle_timeout_ms = 0;
-      if (parse_u64(value, idle_timeout_ms)) {
-        args.idle_timeout_ms = idle_timeout_ms;
-      }
-      continue;
-    }
-  }
-  return args;
-}
-
-struct BinanceQuoteMapperHandler {
-  const binance::BinanceBookTickerMappingContext *context{};
-  md::service::MapperRuntimeStats *stats{};
-  std::uint64_t max_logged_events{};
-  std::uint64_t logged_events{};
-  bool log_events{};
-
-  bool on_message(const md::core::FeedMessageView &message) noexcept {
-    md::core::Quote quote{};
-    if (context == nullptr ||
-        !binance::map_book_ticker_to_quote(message, *context, quote)) {
-      if (stats != nullptr) {
-        stats->observe_failure(message);
-      }
-      if (stats != nullptr && stats->failures <= 3) {
-        MDF_LOG_WARN("Quote 标准化失败 feed_id={} payload_size={} "
-                     "recv_ts_ns={}",
-                     message.envelope.feed_id, message.envelope.payload_size,
-                     message.envelope.recv_ts_ns);
-      }
-      return true;
-    }
-
-    if (stats != nullptr) {
-      stats->observe_success(message);
-    }
-    if (!log_events ||
-        (max_logged_events != 0 && logged_events >= max_logged_events)) {
-      return true;
-    }
-
-    ++logged_events;
-    MDF_LOG_INFO(
-        "Quote 标准化结果 symbol={} exchange_seq={} bid_price={} "
-        "bid_quantity={} ask_price={} ask_quantity={} recv_ts_ns={}",
-        context->provider_symbol, quote.header.exchange_seq, quote.bid_price,
-        quote.bid_quantity, quote.ask_price, quote.ask_quantity,
-        quote.header.recv_ts_ns);
-    return true;
-  }
-};
-
-struct BinanceTradeMapperHandler {
-  const binance::BinanceTradeMappingContext *context{};
-  md::service::MapperRuntimeStats *stats{};
-  std::uint64_t max_logged_events{};
-  std::uint64_t logged_events{};
-  bool log_events{};
-
-  bool on_message(const md::core::FeedMessageView &message) noexcept {
-    md::core::Trade trade{};
-    if (context == nullptr ||
-        !binance::map_trade_to_trade(message, *context, trade)) {
-      if (stats != nullptr) {
-        stats->observe_failure(message);
-      }
-      if (stats != nullptr && stats->failures <= 3) {
-        MDF_LOG_WARN("Trade 标准化失败 feed_id={} payload_size={} "
-                     "recv_ts_ns={}",
-                     message.envelope.feed_id, message.envelope.payload_size,
-                     message.envelope.recv_ts_ns);
-      }
-      return true;
-    }
-
-    if (stats != nullptr) {
-      stats->observe_success(message);
-    }
-    if (!log_events ||
-        (max_logged_events != 0 && logged_events >= max_logged_events)) {
-      return true;
-    }
-
-    ++logged_events;
-    MDF_LOG_INFO(
-        "Trade 标准化结果 symbol={} trade_id={} price={} quantity={} "
-        "aggressor_side={} source_ts_ns={} recv_ts_ns={}",
-        context->provider_symbol, trade.trade_id, trade.price, trade.quantity,
-        aggressor_side_name(trade.aggressor_side), trade.header.source_ts_ns,
-        trade.header.recv_ts_ns);
-    return true;
-  }
-};
-
-struct FeedMessageHandlerChain {
-  md::service::FeedPayloadLogHandler *payload_handler{};
-  BinanceQuoteMapperHandler *quote_mapper_handler{};
-  BinanceTradeMapperHandler *trade_mapper_handler{};
-
-  static bool handle(const md::core::FeedMessageView &message,
-                     void *user_data) noexcept {
-    auto *chain = static_cast<FeedMessageHandlerChain *>(user_data);
-    if (chain == nullptr) {
-      return true;
-    }
-
-    if (chain->payload_handler != nullptr &&
-        !chain->payload_handler->on_message(message)) {
-      return false;
-    }
-    if (chain->quote_mapper_handler != nullptr &&
-        !chain->quote_mapper_handler->on_message(message)) {
-      return false;
-    }
-    if (chain->trade_mapper_handler != nullptr &&
-        !chain->trade_mapper_handler->on_message(message)) {
-      return false;
-    }
-    return true;
-  }
-};
-
 void request_stop(int) noexcept {
   g_stop_requested.store(true, std::memory_order_relaxed);
+}
+
+[[nodiscard]] md::service::FeedRunStatus to_feed_run_status(
+    md::net::WebSocketRunStatus status) noexcept {
+  switch (status) {
+  case md::net::WebSocketRunStatus::Completed:
+    return md::service::FeedRunStatus::Completed;
+  case md::net::WebSocketRunStatus::StoppedByHandler:
+    return md::service::FeedRunStatus::StoppedByHandler;
+  case md::net::WebSocketRunStatus::InvalidEndpoint:
+    return md::service::FeedRunStatus::InvalidEndpoint;
+  case md::net::WebSocketRunStatus::ResolveFailed:
+    return md::service::FeedRunStatus::ResolveFailed;
+  case md::net::WebSocketRunStatus::ConnectFailed:
+    return md::service::FeedRunStatus::ConnectFailed;
+  case md::net::WebSocketRunStatus::TlsHandshakeFailed:
+    return md::service::FeedRunStatus::TlsHandshakeFailed;
+  case md::net::WebSocketRunStatus::WebSocketHandshakeFailed:
+    return md::service::FeedRunStatus::WebSocketHandshakeFailed;
+  case md::net::WebSocketRunStatus::ReadFailed:
+    return md::service::FeedRunStatus::ReadFailed;
+  case md::net::WebSocketRunStatus::CloseFailed:
+    return md::service::FeedRunStatus::CloseFailed;
+  case md::net::WebSocketRunStatus::BackendUnavailable:
+    return md::service::FeedRunStatus::BackendUnavailable;
+  }
+  return md::service::FeedRunStatus::UnknownError;
 }
 
 [[nodiscard]] md::service::FeedRunAttemptResult to_feed_attempt_result(
     const binance::BinanceWebSocketFeedClientRunResult &run_result) {
   md::service::FeedRunAttemptResult attempt{};
-  attempt.status = md::service::to_feed_run_status(run_result.websocket.status);
+  attempt.status = to_feed_run_status(run_result.websocket.status);
   attempt.error_class = md::service::classify_feed_run_status(attempt.status);
   attempt.messages = run_result.messages;
   attempt.bytes = run_result.bytes;
@@ -397,30 +95,10 @@ void request_stop(int) noexcept {
   return 0;
 }
 
-[[nodiscard]] int run_binance_live(int argc, char **argv) {
-  const auto args = parse_binance_live_args(argc, argv);
-  binance::BinanceFeedSpec spec{};
-  spec.market = md::core::MarketSegment::Spot;
-  spec.symbols = args.symbols;
-  spec.kind = args.feed_kind;
-  if (spec.kind == md::core::FeedKind::BookSnapshot) {
-    spec.depth = md::core::FeedDepth::Top20;
-  }
-  const auto connection = binance::make_connection_spec(
-      1, binance::BinanceEnvironment::MarketDataOnly, spec);
-
-  binance::BinanceWebSocketFeedClientOptions options{};
-  options.websocket.max_message_bytes = md::net::kDefaultWsMessageBytes;
-  options.websocket.idle_timeout =
-      std::chrono::milliseconds{args.idle_timeout_ms};
-
-  md::service::FeedSessionOptions session_options{};
-  session_options.max_messages = args.max_messages;
-  session_options.retry.max_attempts = args.max_attempts;
-  session_options.retry.initial_backoff = std::chrono::milliseconds{args.backoff_ms};
-  session_options.retry.max_backoff = std::chrono::milliseconds{args.max_backoff_ms};
-  session_options.retry.reconnect_on_completed = args.reconnect_on_completed;
-
+void log_feed_start(const md::core::FeedConnectionSpec &connection,
+                    const md::service::FeedSessionOptions &session_options,
+                    const binance::BinanceWebSocketFeedClientOptions &options,
+                    const BinanceLiveArgs &args) {
   MDF_LOG_INFO("行情启动 venue=binance feeds={} key={} "
                "max_messages={} normalize={} payload_log={} normalized_log={}",
                connection.feeds.size(), feed_key_label(connection),
@@ -441,6 +119,68 @@ void request_stop(int) noexcept {
     MDF_LOG_DEBUG("feed 已解析 key={} feed_id={}", feed.provider_feed_key,
                   feed.feed_id);
   }
+}
+
+void log_feed_stop(const md::service::FeedSessionResult &result,
+                   const BinanceLiveArgs &args,
+                   const md::service::FeedPayloadLogHandler &payload_log_handler,
+                   const md::service::MapperRuntimeStats &mapper_stats,
+                   double active_sec, double active_msg_per_sec,
+                   double cpu_sec, double cpu_us_per_msg, double avg_bytes) {
+  if (args.log_payload || args.normalize) {
+    MDF_LOG_INFO("行情停止 reason={} status={} messages={} bytes={} "
+                 "payloads={} mapped={} map_failures={}",
+                 md::service::feed_session_stop_reason_name(result.stop_reason),
+                 md::service::feed_run_status_name(result.stats.last_status),
+                 result.stats.messages, result.stats.bytes,
+                 args.log_payload ? payload_log_handler.logged() : 0,
+                 args.normalize ? mapper_stats.output_events : 0,
+                 args.normalize ? mapper_stats.failures : 0);
+  } else {
+    MDF_LOG_INFO("行情停止 reason={} status={} messages={} bytes={}",
+                 md::service::feed_session_stop_reason_name(result.stop_reason),
+                 md::service::feed_run_status_name(result.stats.last_status),
+                 result.stats.messages, result.stats.bytes);
+  }
+  if (!result.stats.last_error.empty()) {
+    MDF_LOG_WARN("最后错误 last_error={}", result.stats.last_error);
+  }
+  MDF_LOG_DEBUG("行情统计 attempts={} reconnects={} error_class={} "
+                "active_sec={} active_msg_per_sec={} cpu_sec={} "
+                "cpu_us_per_msg={} avg_bytes={}",
+                result.stats.attempts, result.stats.reconnects,
+                md::service::feed_error_class_name(result.stats.last_error_class),
+                active_sec, active_msg_per_sec, cpu_sec, cpu_us_per_msg,
+                avg_bytes);
+}
+
+[[nodiscard]] int run_binance_live(int argc, char **argv) {
+  const auto args = parse_binance_live_args(argc, argv);
+  binance::BinanceFeedSpec spec{};
+  spec.market = md::core::MarketSegment::Spot;
+  spec.symbols = args.symbols;
+  spec.kind = args.feed_kind;
+  if (spec.kind == md::core::FeedKind::BookSnapshot) {
+    spec.depth = md::core::FeedDepth::Top20;
+  }
+  const auto connection = binance::make_connection_spec(
+      1, binance::BinanceEnvironment::MarketDataOnly, spec);
+
+  binance::BinanceWebSocketFeedClientOptions options{};
+  options.websocket.max_message_bytes = md::net::kDefaultWsMessageBytes;
+  options.websocket.idle_timeout =
+      std::chrono::milliseconds{args.idle_timeout_ms};
+
+  md::service::FeedSessionOptions session_options{};
+  session_options.max_messages = args.max_messages;
+  session_options.retry.max_attempts = args.max_attempts;
+  session_options.retry.initial_backoff =
+      std::chrono::milliseconds{args.backoff_ms};
+  session_options.retry.max_backoff =
+      std::chrono::milliseconds{args.max_backoff_ms};
+  session_options.retry.reconnect_on_completed = args.reconnect_on_completed;
+
+  log_feed_start(connection, session_options, options, args);
 
   md::service::FeedPayloadLogOptions payload_log_options{};
   payload_log_options.max_payloads = args.log_payloads;
@@ -448,8 +188,8 @@ void request_stop(int) noexcept {
   payload_log_options.log_metadata = args.log_payload;
   payload_log_options.log_payload = args.log_payload;
   md::service::FeedPayloadLogHandler payload_log_handler{payload_log_options};
-  binance::BinanceBookTickerMappingContext quote_context{};
-  binance::BinanceTradeMappingContext trade_context{};
+
+  binance::BinanceMappingContext mapping_context{};
   md::service::MapperRuntimeStats mapper_stats{};
   BinanceQuoteMapperHandler quote_mapper_handler{};
   BinanceTradeMapperHandler trade_mapper_handler{};
@@ -461,17 +201,16 @@ void request_stop(int) noexcept {
       const auto &feed = connection.feeds.front();
       const auto instrument_id =
           make_binance_spot_instrument_id(feed.provider_symbol);
+      mapping_context =
+          binance::make_binance_mapping_context(feed.provider_symbol,
+                                                instrument_id);
       if (spec.kind == md::core::FeedKind::TopOfBook) {
-        quote_context.instrument_id = instrument_id;
-        quote_context.provider_symbol = feed.provider_symbol;
-        quote_mapper_handler.context = &quote_context;
+        quote_mapper_handler.context = &mapping_context;
         quote_mapper_handler.stats = &mapper_stats;
         quote_mapper_handler.max_logged_events = args.log_normalized_events;
         quote_mapper_handler.log_events = args.log_normalized;
       } else if (spec.kind == md::core::FeedKind::Trade) {
-        trade_context.instrument_id = instrument_id;
-        trade_context.provider_symbol = feed.provider_symbol;
-        trade_mapper_handler.context = &trade_context;
+        trade_mapper_handler.context = &mapping_context;
         trade_mapper_handler.stats = &mapper_stats;
         trade_mapper_handler.max_logged_events = args.log_normalized_events;
         trade_mapper_handler.log_events = args.log_normalized;
@@ -481,19 +220,25 @@ void request_stop(int) noexcept {
     }
   }
 
-  FeedMessageHandlerChain handler_chain{};
-  handler_chain.payload_handler = args.log_payload ? &payload_log_handler : nullptr;
-  handler_chain.quote_mapper_handler =
-      quote_mapper_handler.context != nullptr ? &quote_mapper_handler : nullptr;
-  handler_chain.trade_mapper_handler =
-      trade_mapper_handler.context != nullptr ? &trade_mapper_handler : nullptr;
+  md::service::FeedMessagePipeline<4> handler_pipeline{};
+  if (args.log_payload) {
+    (void)handler_pipeline.add(&md::service::FeedPayloadLogHandler::handle,
+                               &payload_log_handler);
+  }
+  if (quote_mapper_handler.context != nullptr) {
+    (void)handler_pipeline.add(&BinanceQuoteMapperHandler::handle,
+                               &quote_mapper_handler);
+  }
+  if (trade_mapper_handler.context != nullptr) {
+    (void)handler_pipeline.add(&BinanceTradeMapperHandler::handle,
+                               &trade_mapper_handler);
+  }
+
   md::core::FeedMessageHandler handler = nullptr;
   void *handler_data = nullptr;
-  if (handler_chain.payload_handler != nullptr ||
-      handler_chain.quote_mapper_handler != nullptr ||
-      handler_chain.trade_mapper_handler != nullptr) {
-    handler = &FeedMessageHandlerChain::handle;
-    handler_data = &handler_chain;
+  if (!handler_pipeline.empty()) {
+    handler = &md::service::FeedMessagePipeline<4>::handle;
+    handler_data = &handler_pipeline;
   }
 
   std::signal(SIGINT, &request_stop);
@@ -534,31 +279,8 @@ void request_stop(int) noexcept {
           ? (cpu_sec * 1'000'000.0) / static_cast<double>(result.stats.messages)
           : 0.0;
 
-  if (args.log_payload || args.normalize) {
-    MDF_LOG_INFO("行情停止 reason={} status={} messages={} bytes={} "
-                 "payloads={} mapped={} map_failures={}",
-                 md::service::feed_session_stop_reason_name(result.stop_reason),
-                 md::service::feed_run_status_name(result.stats.last_status),
-                 result.stats.messages, result.stats.bytes,
-                 args.log_payload ? payload_log_handler.logged() : 0,
-                 args.normalize ? mapper_stats.output_events : 0,
-                 args.normalize ? mapper_stats.failures : 0);
-  } else {
-    MDF_LOG_INFO("行情停止 reason={} status={} messages={} bytes={}",
-                 md::service::feed_session_stop_reason_name(result.stop_reason),
-                 md::service::feed_run_status_name(result.stats.last_status),
-                 result.stats.messages, result.stats.bytes);
-  }
-  if (!result.stats.last_error.empty()) {
-    MDF_LOG_WARN("最后错误 last_error={}", result.stats.last_error);
-  }
-  MDF_LOG_DEBUG("行情统计 attempts={} reconnects={} error_class={} "
-                "active_sec={} active_msg_per_sec={} cpu_sec={} "
-                "cpu_us_per_msg={} avg_bytes={}",
-                result.stats.attempts, result.stats.reconnects,
-                md::service::feed_error_class_name(result.stats.last_error_class),
-                active_sec, active_msg_per_sec, cpu_sec, cpu_us_per_msg,
-                avg_bytes);
+  log_feed_stop(result, args, payload_log_handler, mapper_stats, active_sec,
+                active_msg_per_sec, cpu_sec, cpu_us_per_msg, avg_bytes);
   return result.ok() ? 0 : 1;
 }
 
@@ -580,8 +302,8 @@ int run_binance_command(std::string_view command, int argc, char **argv) {
 }
 
 void log_binance_usage() {
-  const auto feed_usage = feed_kind_usage(false);
-  const auto normalized_feed_usage = feed_kind_usage(true);
+  const auto feed_usage = binance_feed_kind_usage(false);
+  const auto normalized_feed_usage = binance_feed_kind_usage(true);
   MDF_LOG_INFO("预览命令: --binance-feed-spec-preview");
   MDF_LOG_INFO(
       "实时行情: --binance-live "

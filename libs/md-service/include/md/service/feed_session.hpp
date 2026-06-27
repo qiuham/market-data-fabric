@@ -1,7 +1,6 @@
 #pragma once
 
 #include "md/core/feed.hpp"
-#include "md/net/websocket.hpp"
 #include "md/service/feed_message_handler.hpp"
 
 #include <algorithm>
@@ -119,33 +118,6 @@ struct FeedSessionResult {
            stop_reason == FeedSessionStopReason::StopRequested;
   }
 };
-
-inline FeedRunStatus
-to_feed_run_status(md::net::WebSocketRunStatus status) noexcept {
-  switch (status) {
-  case md::net::WebSocketRunStatus::Completed:
-    return FeedRunStatus::Completed;
-  case md::net::WebSocketRunStatus::StoppedByHandler:
-    return FeedRunStatus::StoppedByHandler;
-  case md::net::WebSocketRunStatus::InvalidEndpoint:
-    return FeedRunStatus::InvalidEndpoint;
-  case md::net::WebSocketRunStatus::ResolveFailed:
-    return FeedRunStatus::ResolveFailed;
-  case md::net::WebSocketRunStatus::ConnectFailed:
-    return FeedRunStatus::ConnectFailed;
-  case md::net::WebSocketRunStatus::TlsHandshakeFailed:
-    return FeedRunStatus::TlsHandshakeFailed;
-  case md::net::WebSocketRunStatus::WebSocketHandshakeFailed:
-    return FeedRunStatus::WebSocketHandshakeFailed;
-  case md::net::WebSocketRunStatus::ReadFailed:
-    return FeedRunStatus::ReadFailed;
-  case md::net::WebSocketRunStatus::CloseFailed:
-    return FeedRunStatus::CloseFailed;
-  case md::net::WebSocketRunStatus::BackendUnavailable:
-    return FeedRunStatus::BackendUnavailable;
-  }
-  return FeedRunStatus::UnknownError;
-}
 
 inline FeedRunErrorClass classify_feed_run_status(FeedRunStatus status) noexcept {
   switch (status) {

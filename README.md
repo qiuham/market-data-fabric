@@ -31,9 +31,10 @@
 - `--log-payload` / `--log-normalized` 只用于调试 mapper 和字段检查，不作为生产路径常开选项。
 - 启动、停止、重连、异常保留摘要日志；高频运行状态使用轻量运行指标统计，不靠逐条日志。
 - `FeedMessageHandler` 只保留回调绑定和分发；调试 payload 日志独立为 `FeedPayloadLogHandler`，不再混在消息分发里。
-- Binance adapter 已把 feed spec、WebSocket client、mapper、轻量 JSON 字段读取拆开，避免一个文件同时承担连接、解析和标准化职责。
-- `apps/md-node` 已把通用入口、CLI options 和 Binance live runner 拆开，入口只做日志初始化和命令分发。
-- 本地 smoke tests 覆盖核心事件、Binance feed、mapper、session、WebSocket endpoint 和 SPSC ring。
+- `FeedMessagePipeline` 提供固定容量 handler chain，runner 不再手写 payload / mapper 串联逻辑。
+- Binance adapter 已把 types、symbol、feed key、endpoint、WebSocket client、mapper、轻量 JSON 字段读取拆开，避免一个文件同时承担连接、解析和标准化职责。
+- `apps/md-node` 已把通用入口、CLI options、Binance live options、mapper handlers 和 runner 拆开，入口只做日志初始化和命令分发。
+- 本地 smoke tests 已按模块分目录，覆盖核心事件、Binance feed、mapper、session、WebSocket endpoint 和 SPSC ring。
 
 ## 仓库结构
 
@@ -58,10 +59,10 @@ tests/                                smoke tests
 
 - `md-core` 只放稳定事件、envelope、feed 描述和基础类型，不放 provider 规则。
 - `md-net` 只负责 WebSocket endpoint 和 backend，不理解 Binance / OKX 字段。
-- `md-service` 只负责 session、重连、handler chain、统计和调试日志，不解析交易所 payload。
-- `md-adapters/{asset_class}/{provider}` 放 provider feed key、client、decoder/mapper 和 provider 语义。
-- mapper context 先保留在具体 provider adapter；等 OKX / Bybit / Coinbase 至少两个以上 adapter 出现相同字段，再提公共 helper，避免现在抽太早导致后面难维护。
-- `apps/md-node` 的 `main.cpp` 只负责日志初始化和命令分发；Binance live/preview 编排放在 `binance_live_runner.cpp`，通用 CLI 解析 helper 放在 `cli_options.hpp`。
+- `md-service` 只负责 session、重连、handler pipeline、统计和调试日志，不依赖 `md-net`，也不解析交易所 payload。
+- `md-core/mapping.hpp` 只提供最小 `InstrumentMappingContext`；provider 通过本地 context/工厂填默认 source、venue、精度和 symbol。
+- `md-adapters/{asset_class}/{provider}` 放 provider feed key、endpoint、client、decoder/mapper 和 provider 语义。
+- `apps/md-node` 的 `main.cpp` 只负责日志初始化和命令分发；Binance live/preview 编排放在 `binance_live_runner.cpp`，参数解析和 mapper handler 单独拆分。
 
 ## 数据面
 
@@ -129,6 +130,12 @@ external feed / SDK
 cmake -S . -B cmake-build-debug
 cmake --build cmake-build-debug
 ctest --test-dir cmake-build-debug --output-on-failure
+```
+
+`cmake-build-*` 都是本地构建目录，已在 `.gitignore` 忽略；默认只需要保留 `cmake-build-debug`。历史回放 / MessageLog 测试不是当前主线，默认不构建；需要时加：
+
+```bash
+cmake -S . -B cmake-build-debug -DMDF_BUILD_REPLAY_TESTS=ON
 ```
 
 如果本机没有 Boost headers，CMake 可以按锁定版本下载；离线环境可以提前安装 Boost，或配置 `-DMDF_FETCH_BOOST=OFF`。

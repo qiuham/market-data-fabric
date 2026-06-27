@@ -62,7 +62,7 @@ int main() {
             return attempt_result(md::service::FeedRunStatus::ConnectFailed);
           }
 
-          const auto now = md::net::steady_now_ns();
+          const std::uint64_t now = 1000;
           assert(context.handler(make_message(1, now), context.user_data));
           assert(!context.handler(make_message(2, now + 1), context.user_data));
           return attempt_result(md::service::FeedRunStatus::StoppedByHandler);

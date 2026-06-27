@@ -6,7 +6,9 @@
 
 - `main.cpp`：日志初始化和命令分发。
 - `cli_options.hpp`：通用 CLI option / log level 解析。
-- `binance_live_runner.cpp`：Binance live/preview 的连接、session、mapper handler 编排。
+- `binance_live_options.*`：Binance live CLI 参数和 usage。
+- `binance_mapper_handlers.*`：Binance normalized mapper handler 和调试输出。
+- `binance_live_runner.cpp`：Binance live/preview 的连接、session、pipeline 编排。
 
 当前支持：
 
