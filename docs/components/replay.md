@@ -21,3 +21,7 @@ mapper/venue normalizer
 
 `message_log.hpp` 保存 provider 原始 payload，`event_journal.hpp` 保存 normalized
 事件；前者用于重新解释原始数据，后者用于确定性重建和业务回溯，两者职责不同。
+
+`AsyncEventJournalQueue` 是预分配的有界 SPSC。入队返回 `Full` 时属于数据完整性
+故障，service 必须停止宣称盘口可信，不能静默丢弃。`CheckpointCoordinator` 只在
+journal 已持久化且所有必需下游均应用成功后提交序号，恢复严格从下一序号重放。

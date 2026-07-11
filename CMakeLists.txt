@@ -151,6 +151,16 @@ if (MDF_BUILD_TESTS)
   target_link_libraries(mdf-event-journal-smoke PRIVATE marketdata)
   add_test(NAME event_journal_smoke COMMAND mdf-event-journal-smoke)
 
+  add_executable(mdf-checkpoint-smoke tests/replay/checkpoint_smoke.cpp)
+  target_link_libraries(mdf-checkpoint-smoke PRIVATE marketdata)
+  add_test(NAME checkpoint_smoke COMMAND mdf-checkpoint-smoke)
+
+  add_executable(mdf-trading-phase-tracker-smoke
+                 tests/venues/trading_phase_tracker_smoke.cpp)
+  target_link_libraries(mdf-trading-phase-tracker-smoke PRIVATE marketdata)
+  add_test(NAME trading_phase_tracker_smoke
+           COMMAND mdf-trading-phase-tracker-smoke)
+
   if (EXISTS "${MDF_TRADING_CORE_INCLUDE_DIR}/trading/events/all.hpp")
     add_executable(mdf-tonglian-sequence-gate-smoke
                    tests/adapters/cn/stock/tonglian/sequence_gate_smoke.cpp)

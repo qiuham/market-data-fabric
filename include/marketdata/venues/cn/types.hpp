@@ -25,6 +25,17 @@ enum class OrderKind : std::uint8_t {
   Status,
 };
 
+// 跨供应商稳定的中国证券交易阶段编码。供应商字符串只允许在 adapter 中出现，
+// 下游 phase tracker 和 journal 只消费这里的市场语义。
+enum class TradingPhase : std::uint16_t {
+  Unknown = 0,
+  OpeningCall = 1,
+  Continuous = 2,
+  ClosingCall = 3,
+  Closed = 4,
+  EndOfTrading = 5,
+};
+
 struct OrderView {
   tc::TimestampNs exchange_ts_ns{};
   tc::Sequence event_seq{};
@@ -36,6 +47,7 @@ struct OrderView {
   tc::Quantity quantity{};
   tc::Side side{tc::Side::Unknown};
   OrderKind kind{OrderKind::Unknown};
+  TradingPhase trading_phase{TradingPhase::Unknown};
 };
 
 enum class TransactionKind : std::uint8_t {

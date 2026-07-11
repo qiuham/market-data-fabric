@@ -23,7 +23,10 @@ int main(int argc, char** argv) {
   }
 
   tl::TonglianSequenceGate gate;
-  gate.complete_recovery(3, 0);
+  if (!gate.complete_recovery(3, 0)) {
+    std::cerr << "无法建立序号基线\n";
+    return 1;
+  }
   const auto start = std::chrono::steady_clock::now();
   for (std::uint64_t sequence = 1; sequence <= iterations; ++sequence) {
     if (!gate.observe(3, sequence).accepted()) {

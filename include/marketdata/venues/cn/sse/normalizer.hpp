@@ -2,7 +2,8 @@
 
 #include "marketdata/adapters/map_outcome.hpp"
 #include "marketdata/venues/cn/types.hpp"
-#include "trading/events/l3.hpp"
+#include "trading/events/order_book.hpp"
+#include "trading/events/status.hpp"
 
 namespace md::venues::cn::sse {
 
@@ -44,6 +45,22 @@ namespace te = trading::events;
   }
   out = event;
   return {md::adapters::MapStatus::MappedDiagnostic, false};
+}
+
+[[nodiscard]] inline md::adapters::MapResult normalize(
+    const EventContext& context, const OrderView& view,
+    te::Status& out) noexcept {
+  if (view.kind != OrderKind::Status ||
+      view.trading_phase == TradingPhase::Unknown) {
+    return {md::adapters::MapStatus::Invalid, false};
+  }
+  te::Status event{};
+  fill_header(context, tc::EventKind::Status, view.exchange_ts_ns,
+              view.event_seq, view.exchange_seq, event.header);
+  event.status_type = tc::StatusType::TradingPhase;
+  event.trading_phase = static_cast<std::uint16_t>(view.trading_phase);
+  out = event;
+  return {md::adapters::MapStatus::Mapped, true};
 }
 
 [[nodiscard]] inline md::adapters::MapResult normalize(

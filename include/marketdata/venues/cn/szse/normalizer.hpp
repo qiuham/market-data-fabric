@@ -2,7 +2,7 @@
 
 #include "marketdata/adapters/map_outcome.hpp"
 #include "marketdata/venues/cn/types.hpp"
-#include "trading/events/l3.hpp"
+#include "trading/events/order_book.hpp"
 
 namespace md::venues::cn::szse {
 

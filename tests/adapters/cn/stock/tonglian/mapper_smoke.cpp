@@ -199,6 +199,21 @@ int main() {
       order);
   assert(result.status == tl::MapStatus::Ignored);
 
+  trading::events::Status status{};
+  result = tl::map_status_row(
+      sh,
+      tl::OrderRow{.time_hhmmssmmm = 91400000,
+                   .row_seq = 3,
+                   .order_kind = 'S',
+                   .channel = 3,
+                   .biz_index = 112,
+                   .trading_phase =
+                       md::venues::cn::TradingPhase::OpeningCall},
+      status);
+  assert(result.status == tl::MapStatus::Mapped);
+  assert(status.header.exchange_seq == 112);
+  assert(status.trading_phase == 1);
+
   result = tl::map_transaction_row(
       sh,
       tl::TransactionRow{.time_hhmmssmmm = 93002000,

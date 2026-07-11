@@ -1,6 +1,6 @@
 #include "marketdata/replay/event_journal.hpp"
 #include "orderbook/rebuild/mbo_rebuilder.hpp"
-#include "trading/events/l3.hpp"
+#include "trading/events/order_book.hpp"
 
 #include <charconv>
 #include <cstdint>

@@ -1,5 +1,6 @@
 #include "marketdata/adapters/tonglian/mapper.hpp"
 #include "marketdata/replay/event_journal.hpp"
+#include "marketdata/venues/trading_phase_tracker.hpp"
 #include "orderbook/rebuild/mbo_rebuilder.hpp"
 
 #include <algorithm>
@@ -15,6 +16,7 @@
 #include <string_view>
 #include <system_error>
 #include <unordered_map>
+#include <variant>
 #include <unordered_set>
 #include <vector>
 
@@ -330,7 +332,7 @@ struct SequenceHealth {
   }
 };
 
-enum class Payload { Order, Transaction };
+enum class Payload { Order, Transaction, Status };
 
 struct Event {
   tc::PartitionId channel{};
@@ -338,14 +340,26 @@ struct Event {
   std::uint32_t time{};
   std::uint8_t priority{};
   Payload payload{Payload::Order};
-  te::BookOrder order{};
-  te::BookTransaction transaction{};
+  std::variant<te::BookOrder, te::BookTransaction, te::Status> data{};
 
   [[nodiscard]] bool is_trade() const noexcept {
-    return payload == Payload::Transaction &&
-           transaction.transaction_type == tc::BookTransactionType::Trade;
+    const auto* transaction = std::get_if<te::BookTransaction>(&data);
+    return transaction != nullptr &&
+           transaction->transaction_type == tc::BookTransactionType::Trade;
   }
 };
+
+[[nodiscard]] md::venues::cn::TradingPhase sh_phase(
+    std::string_view value) noexcept {
+  using Phase = md::venues::cn::TradingPhase;
+  const auto phase = trim(value);
+  return phase == "OCALL" ? Phase::OpeningCall
+       : phase == "TRADE" ? Phase::Continuous
+       : phase == "CCALL" ? Phase::ClosingCall
+       : phase == "CLOSE" ? Phase::Closed
+       : phase == "ENDTR" ? Phase::EndOfTrading
+                          : Phase::Unknown;
+}
 
 struct LoadHealth {
   SequenceHealth sequence;
@@ -404,6 +418,24 @@ struct LoadHealth {
     const auto type = enum_char(columns.get(row, "Type"));
     if (type == 'S') {
       ++health.status_rows;
+      tl::OrderRow source{
+          .time_hhmmssmmm = to_time(columns.get(row, "TickTime")),
+          .row_seq = to_int<tc::Sequence>(columns.get(row, "SeqNo")),
+          .order_kind = type,
+          .channel = channel,
+          .biz_index = sequence,
+          .trading_phase = sh_phase(columns.get(row, "TickBSFlag")),
+      };
+      te::Status status{};
+      const auto result = tl::map_status_row(context, source, status);
+      if (mapped(result, health)) {
+        events.push_back(Event{.channel = channel,
+                               .sequence = sequence,
+                               .time = source.time_hhmmssmmm,
+                               .priority = 0,
+                               .payload = Payload::Status,
+                               .data = status});
+      }
       continue;
     }
     const auto time = to_time(columns.get(row, "TickTime"));
@@ -435,7 +467,7 @@ struct LoadHealth {
                                .time = time,
                                .priority = 0,
                                .payload = Payload::Order,
-                               .order = order});
+                               .data = order});
       }
       continue;
     }
@@ -464,7 +496,7 @@ struct LoadHealth {
                                .time = time,
                                .priority = 1,
                                .payload = Payload::Transaction,
-                               .transaction = transaction});
+                               .data = transaction});
       }
       continue;
     }
@@ -515,7 +547,7 @@ void append_sz_orders(const Options& options, std::string_view symbol,
                              .time = time,
                              .priority = 0,
                              .payload = Payload::Order,
-                             .order = order});
+                             .data = order});
     }
   }
 }
@@ -565,7 +597,7 @@ void append_sz_transactions(const Options& options, std::string_view symbol,
                              .time = time,
                              .priority = 1,
                              .payload = Payload::Transaction,
-                             .transaction = transaction});
+                             .data = transaction});
     }
   }
 }
@@ -813,6 +845,7 @@ struct Result {
   }
 
   ob::MboRebuilder book;
+  md::venues::TradingPhaseTracker phase_tracker;
   book.reserve_orders(std::min<std::size_t>(events.size(), 100'000));
   std::optional<md::replay::EventJournalWriter> journal;
   if (!options.journal_dir.empty()) {
@@ -853,20 +886,31 @@ struct Result {
   observe(0);
   for (const auto& event : events) {
     if (event.payload == Payload::Order) {
-      if (journal && !journal->append(event.order, event.channel)) {
+      const auto& order = std::get<te::BookOrder>(event.data);
+      if (journal && !journal->append(order, event.channel)) {
         throw std::runtime_error("写入标准事件日志失败");
       }
-      record_apply(book.apply(event.order), result.apply);
-    } else {
-      if (journal && !journal->append(event.transaction, event.channel)) {
+      record_apply(book.apply(order), result.apply);
+    } else if (event.payload == Payload::Transaction) {
+      const auto& transaction = std::get<te::BookTransaction>(event.data);
+      if (journal && !journal->append(transaction, event.channel)) {
         throw std::runtime_error("写入标准事件日志失败");
       }
-      record_apply(book.apply(event.transaction), result.apply);
+      record_apply(book.apply(transaction), result.apply);
       if (event.is_trade()) {
         ++anchor.count;
-        anchor.volume += event.transaction.quantity;
-        anchor.amount +=
-            event.transaction.price * event.transaction.quantity;
+        anchor.volume += transaction.quantity;
+        anchor.amount += transaction.price * transaction.quantity;
+      }
+    } else {
+      // 状态事件与盘口事件共享序号和 journal，但不改变价格队列。
+      const auto& status = std::get<te::Status>(event.data);
+      if (journal && !journal->append(status, event.channel)) {
+        throw std::runtime_error("写入标准事件日志失败");
+      }
+      if (phase_tracker.apply(status) !=
+          md::venues::PhaseApplyStatus::Applied) {
+        throw std::runtime_error("交易阶段事件顺序异常");
       }
     }
     observe(event.sequence);

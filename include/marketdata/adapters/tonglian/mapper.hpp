@@ -85,13 +85,44 @@ class TonglianSequenceGate {
 
   void begin_recovery() noexcept { state_ = ContinuityState::Recovering; }
 
-  void complete_recovery(std::uint64_t channel,
-                         std::uint64_t sequence) noexcept {
+  // 恢复流必须逐条连续推进，不能用一个较大的尾序号直接“宣告恢复”，否则缺口
+  // 中间是否真正补齐无法证明。返回 Accepted 的记录才允许送往下游重放。
+  [[nodiscard]] ContinuityObservation observe_recovery(
+      std::uint64_t channel, std::uint64_t sequence) noexcept {
+    if (state_ != ContinuityState::Recovering || channel == 0 ||
+        channel != channel_) {
+      return result(ContinuityEvent::Invalid, channel, sequence);
+    }
+    const auto expected = last_accepted_ + 1;
+    if (sequence != expected) {
+      return result(sequence < expected ? ContinuityEvent::Regression
+                                        : ContinuityEvent::Gap,
+                    channel, sequence, expected);
+    }
+    last_accepted_ = sequence;
+    return result(ContinuityEvent::Accepted, channel, sequence);
+  }
+
+  // Uninitialized 时用于 checkpoint/replay 建立可信基线；Recovering 时只允许在
+  // 调用方声明的已重放尾序号与内部逐条推进位置完全一致后恢复实时发布。
+  [[nodiscard]] bool complete_recovery(std::uint64_t channel,
+                                       std::uint64_t sequence) noexcept {
+    if (channel == 0) {
+      return false;
+    }
+    if (state_ == ContinuityState::Recovering &&
+        (channel != channel_ || sequence != last_accepted_)) {
+      return false;
+    }
+    if (state_ != ContinuityState::Uninitialized &&
+        state_ != ContinuityState::Recovering) {
+      return false;
+    }
     channel_ = channel;
     last_accepted_ = sequence;
     last_received_ = sequence;
-    state_ = channel == 0 ? ContinuityState::Uninitialized
-                          : ContinuityState::Healthy;
+    state_ = ContinuityState::Healthy;
+    return true;
   }
 
   void reset() noexcept {
@@ -152,6 +183,8 @@ struct OrderRow {
   tc::PartitionId channel{};
   tc::OrderId original_order_id{};
   tc::Sequence biz_index{};
+  md::venues::cn::TradingPhase trading_phase{
+      md::venues::cn::TradingPhase::Unknown};
 };
 
 struct TransactionRow {
@@ -167,6 +200,12 @@ struct TransactionRow {
   tc::OrderId bid_order_id{};
   tc::PartitionId channel{};
   tc::Sequence biz_index{};
+};
+
+struct OrderMapOutput {
+  tc::EventKind event_kind{tc::EventKind::Unknown};
+  te::BookOrder order{};
+  te::Status status{};
 };
 
 [[nodiscard]] constexpr tc::TimestampNs hhmmssmmm_to_ns(
@@ -244,6 +283,7 @@ struct TransactionRow {
       .quantity = row.quantity,
       .side = map_side(row.function_code),
       .kind = kind,
+      .trading_phase = row.trading_phase,
   };
   if (context.market == Market::Shanghai) {
     return md::venues::cn::sse::normalize(event_context, view, out);
@@ -252,6 +292,26 @@ struct TransactionRow {
     return md::venues::cn::szse::normalize(event_context, view, out);
   }
   return {MapStatus::Unsupported, false};
+}
+
+[[nodiscard]] inline MapResult map_status_row(
+    const MappingContext& context, const OrderRow& row,
+    te::Status& out) noexcept {
+  if (context.market != Market::Shanghai || row.order_kind != 'S') {
+    return {MapStatus::Unsupported, false};
+  }
+  const md::venues::cn::EventContext event_context{
+      context.source_id, context.venue_id, context.feed_id,
+      context.instrument_id, context.trading_day};
+  const md::venues::cn::OrderView view{
+      .exchange_ts_ns = hhmmssmmm_to_ns(row.time_hhmmssmmm),
+      .event_seq = row.row_seq,
+      .exchange_seq = row.biz_index,
+      .partition_id = row.channel,
+      .kind = md::venues::cn::OrderKind::Status,
+      .trading_phase = row.trading_phase,
+  };
+  return md::venues::cn::sse::normalize(event_context, view, out);
 }
 
 [[nodiscard]] inline MapResult map_transaction_row(
@@ -301,20 +361,32 @@ class TonglianMapper {
 
   void begin_recovery() noexcept { sequence_.begin_recovery(); }
 
-  void complete_recovery(tc::PartitionId channel,
-                         tc::Sequence sequence) noexcept {
-    sequence_.complete_recovery(channel, sequence);
+  [[nodiscard]] bool complete_recovery(tc::PartitionId channel,
+                                       tc::Sequence sequence) noexcept {
+    return sequence_.complete_recovery(channel, sequence);
   }
 
   void reset() noexcept { sequence_.reset(); }
 
+  // 一条通联委托流记录可能产生盘口事件或阶段事件。唯一输出包装消除调用方
+  // 误用“只映射委托”重载而静默丢状态的可能，仍然不需要堆分配或虚调用。
   [[nodiscard]] MapOutcome map(const OrderRow& row,
-                               te::BookOrder& out) noexcept {
+                               OrderMapOutput& out) noexcept {
+    out.event_kind = tc::EventKind::Unknown;
     const auto continuity = sequence_.observe(row.channel, row.biz_index);
     if (!continuity.accepted()) {
       return {{MapStatus::Ignored, false}, continuity};
     }
-    return {map_order_row(context_, row, out), continuity};
+    if (row.order_kind == 'S') {
+      const auto mapped = map_status_row(context_, row, out.status);
+      out.event_kind = mapped.ok() ? tc::EventKind::Status
+                                   : tc::EventKind::Unknown;
+      return {mapped, continuity};
+    }
+    const auto mapped = map_order_row(context_, row, out.order);
+    out.event_kind = mapped.ok() ? tc::EventKind::BookOrder
+                                 : tc::EventKind::Unknown;
+    return {mapped, continuity};
   }
 
   [[nodiscard]] MapOutcome map(const TransactionRow& row,

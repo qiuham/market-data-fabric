@@ -10,7 +10,7 @@ int main() {
   assert(result.event == tl::ContinuityEvent::AwaitingBaseline);
   assert(!result.trusted());
 
-  gate.complete_recovery(3, 99);
+  assert(gate.complete_recovery(3, 99));
   assert(gate.observe(3, 100).accepted());
   assert(gate.observe(3, 101).accepted());
 
@@ -30,8 +30,11 @@ int main() {
 
   gate.begin_recovery();
   assert(gate.state() == tl::ContinuityState::Recovering);
-  gate.complete_recovery(3, 105);
-  assert(gate.observe(3, 106).accepted());
+  assert(gate.observe_recovery(3, 102).accepted());
+  assert(gate.observe_recovery(3, 103).accepted());
+  assert(!gate.complete_recovery(3, 105));
+  assert(gate.complete_recovery(3, 103));
+  assert(gate.observe(3, 104).accepted());
 
   result = gate.observe(4, 107);
   assert(result.event == tl::ContinuityEvent::WrongPartition);
@@ -39,7 +42,7 @@ int main() {
 
   gate.reset();
   assert(!gate.observe(3, 200).accepted());
-  gate.complete_recovery(3, 199);
+  assert(gate.complete_recovery(3, 199));
   assert(gate.observe(3, 200).accepted());
   result = gate.observe(3, 199);
   assert(result.event == tl::ContinuityEvent::Regression);
@@ -55,8 +58,8 @@ int main() {
   tl::MappingContext context{};
   context.market = tl::Market::Shanghai;
   tl::TonglianMapper mapper(context);
-  mapper.complete_recovery(3, 9);
-  trading::events::BookOrder order{};
+  assert(mapper.complete_recovery(3, 9));
+  tl::OrderMapOutput output{};
   auto mapped = mapper.map(
       tl::OrderRow{.time_hhmmssmmm = 93000000,
                    .exchange_order_id = 42,
@@ -66,15 +69,23 @@ int main() {
                    .quantity = 100,
                    .channel = 3,
                    .biz_index = 10},
-      order);
+      output);
   assert(mapped.publishable());
-  assert(order.order_id == 42);
+  assert(output.event_kind == trading::core::EventKind::BookOrder);
+  assert(output.order.order_id == 42);
 
   mapped = mapper.map(
-      tl::OrderRow{.order_kind = 'S', .channel = 3, .biz_index = 11}, order);
+      tl::OrderRow{.order_kind = 'S',
+                   .channel = 3,
+                   .biz_index = 11,
+                   .trading_phase =
+                       md::venues::cn::TradingPhase::Continuous},
+      output);
   assert(mapped.continuity.accepted());
-  assert(mapped.mapping.status == tl::MapStatus::Ignored);
-  assert(!mapped.publishable());
+  assert(mapped.publishable());
+  assert(output.event_kind == trading::core::EventKind::Status);
+  assert(output.status.status_type == trading::core::StatusType::TradingPhase);
+  assert(output.status.trading_phase == 2);
 
   mapped = mapper.map(
       tl::OrderRow{.exchange_order_id = 43,
@@ -84,7 +95,7 @@ int main() {
                    .quantity = 100,
                    .channel = 3,
                    .biz_index = 13},
-      order);
+      output);
   assert(mapped.continuity.event == tl::ContinuityEvent::Gap);
   assert(!mapped.publishable());
   return 0;
