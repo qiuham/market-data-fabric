@@ -3,7 +3,7 @@
 #include "binance_live_options.hpp"
 #include "binance_mapper_handlers.hpp"
 
-#include "marketdata/adapters/binance/websocket_feed_client.hpp"
+#include "marketdata/adapters/crypto/binance/websocket_feed_client.hpp"
 #include "marketdata/runtime/logging.hpp"
 #include "marketdata/service/feed_message_handler.hpp"
 #include "marketdata/service/feed_payload_log_handler.hpp"

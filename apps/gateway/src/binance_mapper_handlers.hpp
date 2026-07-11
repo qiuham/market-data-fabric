@@ -1,7 +1,7 @@
 #pragma once
 
-#include "marketdata/adapters/binance/book_ticker_mapper.hpp"
-#include "marketdata/adapters/binance/trade_mapper.hpp"
+#include "marketdata/adapters/crypto/binance/book_ticker_mapper.hpp"
+#include "marketdata/adapters/crypto/binance/trade_mapper.hpp"
 #include "marketdata/feed/feed.hpp"
 #include "marketdata/service/mapper_stats.hpp"
 

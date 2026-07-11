@@ -7,7 +7,7 @@
 字段转换必须落在具体 provider 目录下：
 
 ```text
-libs/adapters/{asset_class}/{provider}/
+include/marketdata/adapters/{market}/{asset_class}/{provider}/
   include/marketdata/adapters/{provider}/
     *_field_mapper.hpp
     *_normalizer.hpp

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "marketdata/adapters/binance/feeds.hpp"
+#include "marketdata/adapters/crypto/binance/feeds.hpp"
 #include "marketdata/net/beast/websocket_client.hpp"
 
 #include <cstdint>

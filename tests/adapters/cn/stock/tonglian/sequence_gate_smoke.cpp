@@ -1,4 +1,4 @@
-#include "marketdata/adapters/tonglian/mapper.hpp"
+#include "marketdata/adapters/cn/stock/tonglian/mapper.hpp"
 
 #include <cassert>
 

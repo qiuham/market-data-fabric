@@ -6,7 +6,7 @@ view；上交所和深交所业务规则分别复用 `venues/cn/sse` 与 `venues
 
 ```text
 Tonglian row
-  -> adapters/tonglian
+  -> adapters/cn/stock/tonglian
   -> CN venue view
   -> SSE/SZSE normalizer
   -> BookOrder / BookTrade

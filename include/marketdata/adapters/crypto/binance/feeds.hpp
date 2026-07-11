@@ -1,6 +1,6 @@
 #pragma once
 
-#include "marketdata/adapters/binance/endpoints.hpp"
+#include "marketdata/adapters/crypto/binance/endpoints.hpp"
 
 #include <cstddef>
 #include <stdexcept>

@@ -37,6 +37,18 @@ feed -> adapters -> venues -> trading-core event
 `runtime` 和 `net` 提供实现能力，不能引入交易所字段语义。`service` 只组装连接、
 恢复、journal 和 publisher，不解析 provider payload。
 
+目录与逻辑边界一致：
+
+```text
+adapters/cn/stock/tonglian   通联字段、文件与序号包装
+adapters/crypto/binance      Binance协议与字段
+venues/cn/sse                上交所公共行情语义
+venues/cn/szse               深交所公共行情语义
+```
+
+不保留只有声明、没有实现或调用方的“未来接口”。参考数据客户端、CPU/内存调优等
+能力在真正接入runtime时再以可测试实现加入，避免目录结构虚报能力。
+
 ## 连续性与恢复
 
 连续性可能同时存在两层：供应商 packet/session 序号和交易所业务序号。decoder

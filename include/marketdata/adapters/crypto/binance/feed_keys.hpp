@@ -1,7 +1,7 @@
 #pragma once
 
-#include "marketdata/adapters/binance/symbols.hpp"
-#include "marketdata/adapters/binance/types.hpp"
+#include "marketdata/adapters/crypto/binance/symbols.hpp"
+#include "marketdata/adapters/crypto/binance/types.hpp"
 
 #include <cstdint>
 #include <stdexcept>

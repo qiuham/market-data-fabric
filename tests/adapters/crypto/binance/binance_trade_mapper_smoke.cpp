@@ -1,4 +1,4 @@
-#include "marketdata/adapters/binance/trade_mapper.hpp"
+#include "marketdata/adapters/crypto/binance/trade_mapper.hpp"
 
 #include <cassert>
 #include <cstdint>

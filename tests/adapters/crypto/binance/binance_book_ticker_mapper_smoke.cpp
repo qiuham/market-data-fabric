@@ -1,4 +1,4 @@
-#include "marketdata/adapters/binance/book_ticker_mapper.hpp"
+#include "marketdata/adapters/crypto/binance/book_ticker_mapper.hpp"
 
 #include <cassert>
 #include <cstdint>

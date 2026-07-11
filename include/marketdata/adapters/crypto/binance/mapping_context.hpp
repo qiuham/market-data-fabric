@@ -1,6 +1,6 @@
 #pragma once
 
-#include "marketdata/adapters/binance/types.hpp"
+#include "marketdata/adapters/crypto/binance/types.hpp"
 #include "marketdata/adapters/mapping.hpp"
 
 #include <cstdint>
