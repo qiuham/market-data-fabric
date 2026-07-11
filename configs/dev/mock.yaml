@@ -5,7 +5,7 @@ node:
 source:
   id: 1
   name: mock
-  adapter: mock
+  provider: mock
 
 pipeline:
   mode: dual  # raw_only | normalized_only | dual

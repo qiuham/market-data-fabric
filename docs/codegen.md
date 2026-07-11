@@ -6,7 +6,7 @@
 
 - codegen 只在构建期或生成步骤运行。
 - 运行时不解释 YAML / JSON / IR 映射文件。
-- 生成物必须是普通 C++，编译进具体 provider adapter。
+- 生成物必须是普通 C++，编译进具体 provider mapper。
 - 热路径 mapper 不反射、不动态查字段、不堆分配、不抛异常。
 - 复杂交易语义保留手写，并用 fixture / golden test 覆盖。
 
@@ -34,7 +34,7 @@
 external API docs / stable IR
   -> tools/codegen
   -> generated C++
-  -> provider adapter
+  -> provider mapper
   -> runtime C++ mapper
 ```
 
@@ -49,6 +49,6 @@ external message -> decoder -> field mapper -> trading-core event
 当前不实现 IR、模板引擎或生成器。等第一个真实 mapper 稳定后，再补：
 
 1. `MappingContext`。
-2. `AdapterCapabilities`。
+2. `ProviderCapabilities`。
 3. provider fixture / golden tests。
 4. codegen 输入格式。

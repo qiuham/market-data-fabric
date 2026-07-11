@@ -11,16 +11,17 @@
 ```text
 原始消息
   -> Provider Decoder：字段、编码、SDK、供应商 session
-  -> Venue Normalizer：交易所订单、成交、状态、序号语义
+  -> Provider Mapper：供应商字段映射
+  -> Market Mapper：交易所订单、成交、状态、序号语义
   -> trading-core Event
 ```
 
 例如通联、TORA 和 XTP 的沪市字段不同，但都应转换为同一种 SSE native view，再
-复用 SSE normalizer。通联的字符 `S` 只是供应商表达；“状态消息推进交易所序号、
+复用 SSE mapper。通联的字符 `S` 只是供应商表达；“状态消息推进交易所序号、
 但不修改订单簿”才是可复用的市场语义。
 
 概念上分层，运行时不分线程。组合 mapper 使用模板或直接函数调用，编译器可以
-内联 decoder、normalizer 和 sink；不得为了目录分层增加队列、虚调用或事件堆分配。
+内联 decoder、mapper 和 sink；不得为了目录分层增加队列、虚调用或事件堆分配。
 
 ## 单一公共库
 
@@ -28,7 +29,7 @@
 目录表达职责，不伪装成多个独立子仓库。
 
 ```text
-feed -> adapters -> venues -> trading-core event
+feed -> providers -> markets -> trading-core event
                                |-> orderbook
                                |-> replay journal
                                |-> publisher
@@ -40,10 +41,10 @@ feed -> adapters -> venues -> trading-core event
 目录与逻辑边界一致：
 
 ```text
-adapters/cn/stock/tonglian   通联字段、文件与序号包装
-adapters/crypto/binance      Binance协议与字段
-venues/cn/sse                上交所公共行情语义
-venues/cn/szse               深交所公共行情语义
+providers/cn/stock/tonglian   通联字段、文件与序号包装
+providers/crypto/binance      Binance协议与字段
+markets/cn/sse                上交所公共行情语义
+markets/cn/szse               深交所公共行情语义
 ```
 
 不保留只有声明、没有实现或调用方的“未来接口”。参考数据客户端、CPU/内存调优等
@@ -52,7 +53,7 @@ venues/cn/szse               深交所公共行情语义
 ## 连续性与恢复
 
 连续性可能同时存在两层：供应商 packet/session 序号和交易所业务序号。decoder
-负责暴露原始 cursor，venue normalizer 负责其理解的交易所连续性。两者对外统一为
+负责暴露原始 cursor，market mapper 负责其理解的交易所连续性。两者对外统一为
 `ContinuityObservation`。
 
 发现 gap 或倒退后必须进入粘滞 `Stale`，停止向订单簿和 publisher 发送后续事件。

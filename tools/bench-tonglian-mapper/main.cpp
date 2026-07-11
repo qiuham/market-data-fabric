@@ -1,4 +1,4 @@
-#include "marketdata/adapters/cn/stock/tonglian/mapper.hpp"
+#include "marketdata/providers/cn/stock/tonglian/mapper.hpp"
 
 #include <charconv>
 #include <chrono>
@@ -8,7 +8,7 @@
 #include <iostream>
 #include <string_view>
 
-namespace tl = md::adapters::tonglian;
+namespace tl = md::providers::tonglian;
 
 int main(int argc, char** argv) {
   std::uint64_t iterations = 20'000'000;

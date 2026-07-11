@@ -9,7 +9,7 @@ marketdata-gateway --roles=gateway --config configs/prod/crypto/binance_spot.yam
 marketdata-gateway --roles=gateway --config configs/prod/cn/futures/ctp.yaml
 ```
 
-这种方式简单、可调试，适合先把 adapter、标准化、publisher 和消费端流程跑通。
+这种方式简单、可调试，适合先把 provider、标准化、publisher 和消费端流程跑通。
 
 ## 第二阶段
 
@@ -68,7 +68,7 @@ gateway-ib-0: gateway
 无论控制面如何部署，实时行情都应该走数据面：
 
 ```text
-adapter -> decoder -> normalizer -> transport
+provider -> decoder -> mapper -> transport
 ```
 
 不要让每条行情进入 lease、assignment 或共识路径。

@@ -1,4 +1,4 @@
-#include "marketdata/adapters/crypto/binance/feeds.hpp"
+#include "marketdata/providers/crypto/binance/feeds.hpp"
 #include "marketdata/replay/message_log.hpp"
 
 #include <cassert>
@@ -7,7 +7,7 @@
 #include <string>
 
 int main() {
-  namespace binance = md::adapters::binance;
+  namespace binance = md::providers::binance;
 
   const auto unique =
       std::chrono::steady_clock::now().time_since_epoch().count();

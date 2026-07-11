@@ -10,4 +10,4 @@
 - WebSocket frame 工具。
 - 字符编码转换。
 
-具体供应商字段含义和业务转换仍然属于 `adapters/{provider}`。
+具体供应商字段含义和业务转换仍然属于 `providers/{provider}`。

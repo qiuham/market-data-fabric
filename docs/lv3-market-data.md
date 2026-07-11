@@ -53,7 +53,7 @@ Lv3 统一使用两个核心事件：
 
 ### 加密货币
 
-很多 crypto 公开行情只提供 L2 聚合深度，不提供完整订单级数据。只有当交易所或供应商明确提供 order-by-order feed 时，adapter 才能输出 `OrderEvent` 和 `Execution`。
+很多 crypto 公开行情只提供 L2 聚合深度，不提供完整订单级数据。只有当交易所或供应商明确提供 order-by-order feed 时，provider 才能输出 `OrderEvent` 和 `Execution`。
 
 ### A 股
 
@@ -69,7 +69,7 @@ A 股 Lv3 通常依赖逐笔委托和逐笔成交授权。逐笔委托映射为 
 
 ## 不伪造原则
 
-adapter 必须声明实际能力：
+provider 必须声明实际能力：
 
 ```yaml
 book_model: L1
@@ -77,7 +77,7 @@ book_model: L2Mbp
 book_model: L3Mbo
 ```
 
-如果外部 feed 只提供 L2 聚合盘口，adapter 只能输出 `BookUpdate` 或 `BookSnapshot`。不能拆分聚合数量来伪造订单级委托。
+如果外部 feed 只提供 L2 聚合盘口，provider 只能输出 `BookUpdate` 或 `BookSnapshot`。不能拆分聚合数量来伪造订单级委托。
 
 ## MBO Book
 

@@ -2,7 +2,7 @@
 
 `client` 是消费端库，给策略和下游服务使用。
 
-它不包含行情源 adapter，也不包含 broker 服务本身。它只封装：
+它不包含行情源 provider，也不包含 broker 服务本身。它只封装：
 
 - NATS/Kafka/shared memory 等消费方式。
 - schema 解码。

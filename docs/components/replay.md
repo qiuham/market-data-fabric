@@ -8,7 +8,7 @@
 生产行情线程不直接写文件。推荐链路：
 
 ```text
-mapper/venue normalizer
+mapper/market mapper
   -> orderbook
   -> 预分配 SPSC
   -> 独立 journal writer

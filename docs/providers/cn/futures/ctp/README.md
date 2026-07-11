@@ -1,6 +1,6 @@
-# CTP 行情适配器
+# CTP 行情接入
 
-CTP 期货行情 adapter 骨架。
+CTP 期货行情 provider 骨架。
 
 职责：
 

@@ -1,4 +1,4 @@
-# TORA A 股 native 适配器
+# TORA A 股 native接入
 
 华鑫 TORA 是 A 股 native 接入的第二优先级。这里后续放 TORA SDK wrapper、字段 view、mapper 和测试 fixture。
 

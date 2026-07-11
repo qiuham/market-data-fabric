@@ -7,12 +7,12 @@ gateway 支持三种数据模式，用来区分接入阶段和生产阶段的职
 只接收供应商原始消息，不输出标准化事件。
 
 ```text
-external feed -> adapter -> RawProviderMessage
+external feed -> provider -> RawProviderMessage
 ```
 
 适合：
 
-- 新 adapter 初期验证连接、订阅和限流。
+- 新 provider 初期验证连接、订阅和限流。
 - 收集真实样本，辅助开发 decoder / mapper。
 - refdata 和字段语义还没有稳定时降低接入成本。
 

@@ -2,20 +2,20 @@
 
 这里预留构建期 codegen 工具。
 
-目标：从外部 API 文档项目产出的稳定 IR 生成 C++ raw provider message type、mapper 骨架、测试骨架和文档。生成的 C++ 代码编译进具体 provider adapter，运行时不解释配置文件。
+目标：从外部 API 文档项目产出的稳定 IR 生成 C++ raw provider message type、mapper 骨架、测试骨架和文档。生成的 C++ 代码编译进具体 provider mapper，运行时不解释配置文件。
 
 当前状态：只预留目录，不实现生成器。
 
 ## 输入
 
-输入来自外部 API 文档项目，而不是本仓库手写 mapping 文件。具体 IR 格式等第一个真实 adapter 接入后再确定。
+输入来自外部 API 文档项目，而不是本仓库手写 mapping 文件。具体 IR 格式等第一个真实 provider 接入后再确定。
 
 ## 输出
 
 建议输出到具体 provider 目录：
 
 ```text
-libs/adapters/{asset_class}/{provider}/generated/
+libs/providers/{asset_class}/{provider}/generated/
   *_provider_message.hpp
   *_mapper.generated.hpp
   *_mapper.generated.cpp

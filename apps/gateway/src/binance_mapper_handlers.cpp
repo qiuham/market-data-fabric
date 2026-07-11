@@ -5,7 +5,7 @@
 namespace md::apps::md_node {
 namespace {
 
-namespace binance = md::adapters::binance;
+namespace binance = md::providers::binance;
 
 [[nodiscard]] const char *aggressor_side_name(
     trading::core::AggressorSide side) noexcept {

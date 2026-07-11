@@ -1,7 +1,7 @@
 #pragma once
 
-#include "marketdata/adapters/crypto/binance/book_ticker_mapper.hpp"
-#include "marketdata/adapters/crypto/binance/trade_mapper.hpp"
+#include "marketdata/providers/crypto/binance/book_ticker_mapper.hpp"
+#include "marketdata/providers/crypto/binance/trade_mapper.hpp"
 #include "marketdata/feed/feed.hpp"
 #include "marketdata/service/mapper_stats.hpp"
 
@@ -15,7 +15,7 @@ namespace md::apps::md_node {
 make_binance_spot_instrument_id(std::string_view provider_symbol);
 
 struct BinanceQuoteMapperHandler {
-  const md::adapters::binance::BinanceBookTickerMappingContext
+  const md::providers::binance::BinanceBookTickerMappingContext
       *context{};
   md::service::MapperRuntimeStats *stats{};
   std::uint64_t max_logged_events{};
@@ -28,7 +28,7 @@ struct BinanceQuoteMapperHandler {
 };
 
 struct BinanceTradeMapperHandler {
-  const md::adapters::binance::BinanceTradeMappingContext *context{};
+  const md::providers::binance::BinanceTradeMappingContext *context{};
   md::service::MapperRuntimeStats *stats{};
   std::uint64_t max_logged_events{};
   std::uint64_t logged_events{};

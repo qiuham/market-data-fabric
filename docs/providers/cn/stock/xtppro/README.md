@@ -1,4 +1,4 @@
-# XTP Pro A 股行情适配器
+# XTP Pro A 股行情接入
 
 中泰 XTP Pro 是当前 A 股行情接入主线。这里后续放 XTP Pro Quote SDK wrapper、字段 view、mapper 和测试 fixture。
 

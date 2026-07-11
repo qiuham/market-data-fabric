@@ -4,9 +4,9 @@
 #
 # 未来形态：
 #   mdf_add_codegen_target(
-#     TARGET md-adapter-binance-generated
+#     TARGET md-provider-binance-generated
 #     INPUT  ${CMAKE_SOURCE_DIR}/path/to/provider.ir.json
-#     OUTPUT_DIR ${CMAKE_SOURCE_DIR}/libs/adapters/crypto/binance/generated
+#     OUTPUT_DIR ${CMAKE_SOURCE_DIR}/providers/crypto/binance/generated
 #   )
 
 function(mdf_add_codegen_target)

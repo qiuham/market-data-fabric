@@ -1,7 +1,7 @@
 pipeline:
   mode: raw_only
 
-adapter:
+provider:
   market: crypto
   provider: binance
   venue: spot

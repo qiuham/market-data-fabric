@@ -3,7 +3,7 @@
 #include "binance_live_options.hpp"
 #include "binance_mapper_handlers.hpp"
 
-#include "marketdata/adapters/crypto/binance/websocket_feed_client.hpp"
+#include "marketdata/providers/crypto/binance/websocket_feed_client.hpp"
 #include "marketdata/runtime/logging.hpp"
 #include "marketdata/service/feed_message_handler.hpp"
 #include "marketdata/service/feed_payload_log_handler.hpp"
@@ -19,7 +19,7 @@
 namespace md::apps::md_node {
 namespace {
 
-namespace binance = md::adapters::binance;
+namespace binance = md::providers::binance;
 
 std::atomic_bool g_stop_requested{false};
 

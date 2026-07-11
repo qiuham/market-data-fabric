@@ -1,14 +1,14 @@
 # 通联 A 股行情适配
 
 通联层负责 Parquet/SDK 字段、字符枚举和供应商时间表达，随后生成统一中国交易所
-view；上交所和深交所业务规则分别复用 `venues/cn/sse` 与 `venues/cn/szse`，最终
+view；上交所和深交所业务规则分别复用 `markets/cn/sse` 与 `markets/cn/szse`，最终
 输出 trading-core 标准事件。
 
 ```text
 Tonglian row
-  -> adapters/cn/stock/tonglian
+  -> providers/cn/stock/tonglian
   -> CN venue view
-  -> SSE/SZSE normalizer
+  -> SSE/SZSE mapper
   -> BookOrder / BookTrade
 ```
 

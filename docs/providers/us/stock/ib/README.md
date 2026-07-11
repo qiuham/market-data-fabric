@@ -1,6 +1,6 @@
-# IB 行情适配器
+# IB 行情接入
 
-Interactive Brokers 行情 adapter 骨架。
+Interactive Brokers 行情 provider 骨架。
 
 IB API 通常通过 TWS 或 IB Gateway 接入，适合中低频和多市场覆盖，不应被当作低延迟直连行情源。
 

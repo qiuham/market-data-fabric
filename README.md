@@ -10,8 +10,8 @@
 include/marketdata/
   feed/          原始消息、连接和 feed 描述
   codecs/        JSON、二进制和定点数解析
-  adapters/      按市场/provider组织的decoder与组合mapper
-  venues/        SSE、SZSE 等交易所语义
+  providers/      按市场/provider组织的decoder与组合mapper
+  markets/        SSE、SZSE 等交易所语义
   replay/        原始/标准事件日志与确定性回放
   runtime/       当前实际使用的SPSC与日志辅助
   service/       session、恢复和发布编排
@@ -33,7 +33,8 @@ target_link_libraries(your_target PRIVATE marketdata)
 ```text
 provider raw message
   -> provider decoder
-  -> venue normalizer
+  -> provider mapper
+  -> market mapper
   -> trading-core event
   -> router
   -> orderbook / journal / publisher
@@ -43,9 +44,9 @@ provider raw message
 序号语义。两层通过 header-only facade 在同一调用栈内组合，不增加线程、队列、
 虚函数或动态分配。
 
-provider路径固定为`adapters/<market>/<provider>`，例如
-`adapters/cn/stock/tonglian`和`adapters/crypto/binance`。同市场多个provider复用
-`venues/<market>/<venue>`，不能复制一份交易所规则到每个provider中。
+provider路径固定为`providers/<market>/<provider>`，例如
+`providers/cn/stock/tonglian`和`providers/crypto/binance`。同市场多个provider复用
+`markets/<market>/<venue>`，不能复制一份交易所规则到每个provider中。
 
 ## 构建
 

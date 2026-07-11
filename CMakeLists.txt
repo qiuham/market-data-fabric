@@ -19,7 +19,7 @@ option(MDF_ENABLE_MULTICAST "Build UDP multicast transport modules" ON)
 option(MDF_ENABLE_BEAST_WS "Build Boost.Beast WebSocket backend when headers are available" ON)
 set(MDF_TRADING_CORE_INCLUDE_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/../trading-core/include"
-    CACHE PATH "Path to trading-core/include for adapters that emit shared trading events")
+    CACHE PATH "Path to trading-core/include for mappers that emit shared trading events")
 set(MDF_ORDERBOOK_INCLUDE_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/../orderbook/include"
     CACHE PATH "Path to orderbook/include for offline book check tools")
@@ -92,25 +92,25 @@ if (MDF_BUILD_TESTS)
   endif()
 
   add_executable(mdf-binance-feeds-smoke
-                 tests/adapters/crypto/binance/binance_feeds_smoke.cpp)
+                 tests/providers/crypto/binance/binance_feeds_smoke.cpp)
   target_link_libraries(mdf-binance-feeds-smoke PRIVATE marketdata)
   add_test(NAME binance_feeds_smoke COMMAND mdf-binance-feeds-smoke)
 
   add_executable(mdf-binance-book-ticker-mapper-smoke
-                 tests/adapters/crypto/binance/binance_book_ticker_mapper_smoke.cpp)
+                 tests/providers/crypto/binance/binance_book_ticker_mapper_smoke.cpp)
   target_link_libraries(mdf-binance-book-ticker-mapper-smoke PRIVATE marketdata)
   add_test(NAME binance_book_ticker_mapper_smoke
            COMMAND mdf-binance-book-ticker-mapper-smoke)
 
   add_executable(mdf-binance-trade-mapper-smoke
-                 tests/adapters/crypto/binance/binance_trade_mapper_smoke.cpp)
+                 tests/providers/crypto/binance/binance_trade_mapper_smoke.cpp)
   target_link_libraries(mdf-binance-trade-mapper-smoke PRIVATE marketdata)
   add_test(NAME binance_trade_mapper_smoke
            COMMAND mdf-binance-trade-mapper-smoke)
 
   if (EXISTS "${MDF_TRADING_CORE_INCLUDE_DIR}/trading/events/order_book.hpp")
     add_executable(mdf-cn-stock-tonglian-mapper-smoke
-                   tests/adapters/cn/stock/tonglian/mapper_smoke.cpp)
+                   tests/providers/cn/stock/tonglian/mapper_smoke.cpp)
     target_link_libraries(mdf-cn-stock-tonglian-mapper-smoke PRIVATE marketdata)
     add_test(NAME cn_stock_tonglian_mapper_smoke
              COMMAND mdf-cn-stock-tonglian-mapper-smoke)
@@ -141,14 +141,14 @@ if (MDF_BUILD_TESTS)
   add_test(NAME checkpoint_smoke COMMAND mdf-checkpoint-smoke)
 
   add_executable(mdf-trading-phase-tracker-smoke
-                 tests/venues/trading_phase_tracker_smoke.cpp)
+                 tests/markets/trading_phase_tracker_smoke.cpp)
   target_link_libraries(mdf-trading-phase-tracker-smoke PRIVATE marketdata)
   add_test(NAME trading_phase_tracker_smoke
            COMMAND mdf-trading-phase-tracker-smoke)
 
   if (EXISTS "${MDF_TRADING_CORE_INCLUDE_DIR}/trading/events/order_book.hpp")
     add_executable(mdf-tonglian-sequence-gate-smoke
-                   tests/adapters/cn/stock/tonglian/sequence_gate_smoke.cpp)
+                   tests/providers/cn/stock/tonglian/sequence_gate_smoke.cpp)
     target_link_libraries(mdf-tonglian-sequence-gate-smoke
                           PRIVATE marketdata)
     add_test(NAME tonglian_sequence_gate_smoke
