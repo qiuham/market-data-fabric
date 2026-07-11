@@ -19,11 +19,10 @@ namespace te = trading::events;
   return parsed.ec == std::errc{} ? value : 0;
 }
 
-[[nodiscard]] bool references(const te::BookTransaction& event,
+[[nodiscard]] bool references(const te::BookTrade& event,
                               tc::OrderId order_id) noexcept {
   return order_id != 0 &&
          (event.buy_order_id == order_id || event.sell_order_id == order_id ||
-          event.canceled_order_id == order_id ||
           event.resting_order_id == order_id ||
           event.aggressor_order_id == order_id);
 }
@@ -68,7 +67,7 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    te::BookTransaction transaction{};
+    te::BookTrade transaction{};
     if (!record.decode(transaction)) {
       continue;
     }

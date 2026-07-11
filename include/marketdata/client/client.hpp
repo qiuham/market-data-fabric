@@ -4,7 +4,8 @@
 #include <string>
 #include <string_view>
 
-#include "trading/events/all.hpp"
+#include "trading/events/market.hpp"
+#include "trading/events/order_book.hpp"
 
 namespace md::client {
 
@@ -12,9 +13,9 @@ enum class EventMask : unsigned {
     Trade = 1u << 0,
     Quote = 1u << 1,
     Book = 1u << 2,
-    Status = 1u << 3,
+    TradingPhase = 1u << 3,
     Order = 1u << 4,
-    Execution = 1u << 5,
+    BookTrade = 1u << 5,
 };
 
 struct FeedRequest {
@@ -37,8 +38,8 @@ public:
         std::function<void(const trading::events::Trade&)> handler) = 0;
     virtual void on_order_event(
         std::function<void(const trading::events::BookOrder&)> handler) = 0;
-    virtual void on_execution(
-        std::function<void(const trading::events::BookTransaction&)> handler) = 0;
+    virtual void on_book_trade(
+        std::function<void(const trading::events::BookTrade&)> handler) = 0;
     virtual void run() = 0;
 };
 

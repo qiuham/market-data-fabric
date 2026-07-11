@@ -332,7 +332,7 @@ struct SequenceHealth {
   }
 };
 
-enum class Payload { Order, Transaction, Status };
+enum class Payload { Order, Trade, TradingPhase };
 
 struct Event {
   tc::PartitionId channel{};
@@ -340,12 +340,10 @@ struct Event {
   std::uint32_t time{};
   std::uint8_t priority{};
   Payload payload{Payload::Order};
-  std::variant<te::BookOrder, te::BookTransaction, te::Status> data{};
+  std::variant<te::BookOrder, te::BookTrade, te::TradingPhaseUpdate> data{};
 
   [[nodiscard]] bool is_trade() const noexcept {
-    const auto* transaction = std::get_if<te::BookTransaction>(&data);
-    return transaction != nullptr &&
-           transaction->transaction_type == tc::BookTransactionType::Trade;
+    return std::holds_alternative<te::BookTrade>(data);
   }
 };
 
@@ -426,14 +424,14 @@ struct LoadHealth {
           .biz_index = sequence,
           .trading_phase = sh_phase(columns.get(row, "TickBSFlag")),
       };
-      te::Status status{};
+      te::TradingPhaseUpdate status{};
       const auto result = tl::map_status_row(context, source, status);
       if (mapped(result, health)) {
         events.push_back(Event{.channel = channel,
                                .sequence = sequence,
                                .time = source.time_hhmmssmmm,
                                .priority = 0,
-                               .payload = Payload::Status,
+                               .payload = Payload::TradingPhase,
                                .data = status});
       }
       continue;
@@ -487,16 +485,24 @@ struct LoadHealth {
           .channel = channel,
           .biz_index = sequence,
       };
-      te::BookTransaction transaction{};
-      const auto result =
-          tl::map_transaction_row(context, source, transaction);
+      tl::TransactionMapOutput output{};
+      const auto result = tl::map_transaction_row(context, source, output);
       if (mapped(result, health)) {
-        events.push_back(Event{.channel = channel,
-                               .sequence = sequence,
-                               .time = time,
-                               .priority = 1,
-                               .payload = Payload::Transaction,
-                               .data = transaction});
+        if (output.event_kind == tc::EventKind::BookOrder) {
+          events.push_back(Event{.channel = channel,
+                                 .sequence = sequence,
+                                 .time = time,
+                                 .priority = 1,
+                                 .payload = Payload::Order,
+                                 .data = output.order});
+        } else {
+          events.push_back(Event{.channel = channel,
+                                 .sequence = sequence,
+                                 .time = time,
+                                 .priority = 1,
+                                 .payload = Payload::Trade,
+                                 .data = output.trade});
+        }
       }
       continue;
     }
@@ -589,15 +595,24 @@ void append_sz_transactions(const Options& options, std::string_view symbol,
         .channel = channel,
         .biz_index = sequence,
     };
-    te::BookTransaction transaction{};
-    const auto result = tl::map_transaction_row(context, source, transaction);
+    tl::TransactionMapOutput output{};
+    const auto result = tl::map_transaction_row(context, source, output);
     if (mapped(result, health)) {
-      events.push_back(Event{.channel = channel,
-                             .sequence = sequence,
-                             .time = time,
-                             .priority = 1,
-                             .payload = Payload::Transaction,
-                             .data = transaction});
+      if (output.event_kind == tc::EventKind::BookOrder) {
+        events.push_back(Event{.channel = channel,
+                               .sequence = sequence,
+                               .time = time,
+                               .priority = 1,
+                               .payload = Payload::Order,
+                               .data = output.order});
+      } else {
+        events.push_back(Event{.channel = channel,
+                               .sequence = sequence,
+                               .time = time,
+                               .priority = 1,
+                               .payload = Payload::Trade,
+                               .data = output.trade});
+      }
     }
   }
 }
@@ -891,8 +906,8 @@ struct Result {
         throw std::runtime_error("写入标准事件日志失败");
       }
       record_apply(book.apply(order), result.apply);
-    } else if (event.payload == Payload::Transaction) {
-      const auto& transaction = std::get<te::BookTransaction>(event.data);
+    } else if (event.payload == Payload::Trade) {
+      const auto& transaction = std::get<te::BookTrade>(event.data);
       if (journal && !journal->append(transaction, event.channel)) {
         throw std::runtime_error("写入标准事件日志失败");
       }
@@ -904,7 +919,7 @@ struct Result {
       }
     } else {
       // 状态事件与盘口事件共享序号和 journal，但不改变价格队列。
-      const auto& status = std::get<te::Status>(event.data);
+      const auto& status = std::get<te::TradingPhaseUpdate>(event.data);
       if (journal && !journal->append(status, event.channel)) {
         throw std::runtime_error("写入标准事件日志失败");
       }

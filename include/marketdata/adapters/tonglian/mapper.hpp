@@ -3,7 +3,8 @@
 #include "marketdata/adapters/map_outcome.hpp"
 #include "marketdata/venues/cn/sse/normalizer.hpp"
 #include "marketdata/venues/cn/szse/normalizer.hpp"
-#include "trading/events/all.hpp"
+#include "trading/events/order_book.hpp"
+#include "trading/events/trading_phase.hpp"
 
 #include <cstdint>
 
@@ -205,7 +206,15 @@ struct TransactionRow {
 struct OrderMapOutput {
   tc::EventKind event_kind{tc::EventKind::Unknown};
   te::BookOrder order{};
-  te::Status status{};
+  te::TradingPhaseUpdate phase_update{};
+};
+
+// 通联把成交与撤单混放在逐笔成交流中；统一输出在 mapper 边界拆成订单生命周期
+// 或订单关联成交，避免把供应商文件分类泄漏到 trading-core。
+struct TransactionMapOutput {
+  tc::EventKind event_kind{tc::EventKind::Unknown};
+  te::BookOrder order{};
+  te::BookTrade trade{};
 };
 
 [[nodiscard]] constexpr tc::TimestampNs hhmmssmmm_to_ns(
@@ -261,7 +270,7 @@ struct OrderMapOutput {
   if (context.market == Market::Shanghai) {
     kind = row.order_kind == 'A'   ? cn::OrderKind::AddLimit
            : row.order_kind == 'D' ? cn::OrderKind::Delete
-           : row.order_kind == 'S' ? cn::OrderKind::Status
+           : row.order_kind == 'S' ? cn::OrderKind::TradingPhase
                                    : cn::OrderKind::Unknown;
   } else if (context.market == Market::Shenzhen) {
     kind = row.order_kind == '0'   ? cn::OrderKind::AddLimit
@@ -296,7 +305,7 @@ struct OrderMapOutput {
 
 [[nodiscard]] inline MapResult map_status_row(
     const MappingContext& context, const OrderRow& row,
-    te::Status& out) noexcept {
+    te::TradingPhaseUpdate& out) noexcept {
   if (context.market != Market::Shanghai || row.order_kind != 'S') {
     return {MapStatus::Unsupported, false};
   }
@@ -308,7 +317,7 @@ struct OrderMapOutput {
       .event_seq = row.row_seq,
       .exchange_seq = row.biz_index,
       .partition_id = row.channel,
-      .kind = md::venues::cn::OrderKind::Status,
+      .kind = md::venues::cn::OrderKind::TradingPhase,
       .trading_phase = row.trading_phase,
   };
   return md::venues::cn::sse::normalize(event_context, view, out);
@@ -316,7 +325,7 @@ struct OrderMapOutput {
 
 [[nodiscard]] inline MapResult map_transaction_row(
     const MappingContext& context, const TransactionRow& row,
-    te::BookTransaction& out) noexcept {
+    TransactionMapOutput& out) noexcept {
   namespace cn = md::venues::cn;
   const auto exchange_seq =
       row.biz_index != 0 ? row.biz_index : row.transaction_id;
@@ -344,10 +353,32 @@ struct OrderMapOutput {
       .kind = kind,
   };
   if (context.market == Market::Shanghai) {
-    return md::venues::cn::sse::normalize(event_context, view, out);
+    if (kind == cn::TransactionKind::Cancel) {
+      const auto result =
+          md::venues::cn::sse::normalize(event_context, view, out.order);
+      out.event_kind = result.ok() ? tc::EventKind::BookOrder
+                                   : tc::EventKind::Unknown;
+      return result;
+    }
+    const auto result =
+        md::venues::cn::sse::normalize(event_context, view, out.trade);
+    out.event_kind = result.ok() ? tc::EventKind::BookTrade
+                                 : tc::EventKind::Unknown;
+    return result;
   }
   if (context.market == Market::Shenzhen) {
-    return md::venues::cn::szse::normalize(event_context, view, out);
+    if (kind == cn::TransactionKind::Cancel) {
+      const auto result =
+          md::venues::cn::szse::normalize(event_context, view, out.order);
+      out.event_kind = result.ok() ? tc::EventKind::BookOrder
+                                   : tc::EventKind::Unknown;
+      return result;
+    }
+    const auto result =
+        md::venues::cn::szse::normalize(event_context, view, out.trade);
+    out.event_kind = result.ok() ? tc::EventKind::BookTrade
+                                 : tc::EventKind::Unknown;
+    return result;
   }
   return {MapStatus::Unsupported, false};
 }
@@ -378,8 +409,8 @@ class TonglianMapper {
       return {{MapStatus::Ignored, false}, continuity};
     }
     if (row.order_kind == 'S') {
-      const auto mapped = map_status_row(context_, row, out.status);
-      out.event_kind = mapped.ok() ? tc::EventKind::Status
+      const auto mapped = map_status_row(context_, row, out.phase_update);
+      out.event_kind = mapped.ok() ? tc::EventKind::TradingPhaseUpdate
                                    : tc::EventKind::Unknown;
       return {mapped, continuity};
     }
@@ -390,7 +421,8 @@ class TonglianMapper {
   }
 
   [[nodiscard]] MapOutcome map(const TransactionRow& row,
-                               te::BookTransaction& out) noexcept {
+                               TransactionMapOutput& out) noexcept {
+    out.event_kind = tc::EventKind::Unknown;
     const auto continuity = sequence_.observe(row.channel, row.biz_index);
     if (!continuity.accepted()) {
       return {{MapStatus::Ignored, false}, continuity};

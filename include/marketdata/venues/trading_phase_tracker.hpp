@@ -1,6 +1,6 @@
 #pragma once
 
-#include "trading/events/status.hpp"
+#include "trading/events/trading_phase.hpp"
 
 #include <cstdint>
 
@@ -13,14 +13,13 @@ enum class PhaseApplyStatus : std::uint8_t {
   Unsupported,
 };
 
-// 每个标的由 router 持有一个实例。它只理解标准 Status，不依赖通联字符串，
+// 每个标的由 router 持有一个实例。它只理解标准 TradingPhaseUpdate，不依赖通联字符串，
 // 因而 SSE 的其他数据源以及后续其他市场均可复用同一状态容器。
 class TradingPhaseTracker {
  public:
   [[nodiscard]] PhaseApplyStatus apply(
-      const trading::events::Status& event) noexcept {
-    if (event.status_type != trading::core::StatusType::TradingPhase ||
-        event.trading_phase == trading::core::TradingPhase::Unknown ||
+      const trading::events::TradingPhaseUpdate& event) noexcept {
+    if (event.trading_phase == trading::core::TradingPhase::Unknown ||
         event.header.exchange_seq == 0) {
       return PhaseApplyStatus::Unsupported;
     }

@@ -20,7 +20,7 @@ tests/replay/                replay / MessageLog 预留测试，默认不构建
 - `tests/adapters/crypto/binance/binance_feeds_smoke.cpp`：验证 Binance feed key、connection spec 和 envelope 生成。
 - `tests/adapters/crypto/binance/binance_book_ticker_mapper_smoke.cpp`：验证 Binance `bookTicker -> Quote` 字段转换。
 - `tests/adapters/crypto/binance/binance_trade_mapper_smoke.cpp`：验证 Binance `trade -> Trade` 字段转换。
-- `tests/adapters/cn/stock/tonglian/mapper_smoke.cpp`：验证通联 A 股逐笔字段到 `BookOrder` / `BookTransaction` 的字段转换；本地存在 `../trading-core/include` 时自动加入 CTest。
+- `tests/adapters/cn/stock/tonglian/mapper_smoke.cpp`：验证通联 A 股逐笔字段到 `BookOrder` / `BookTrade` 的字段转换；本地存在 `../trading-core/include` 时自动加入 CTest。
 - `tests/net/websocket_endpoint_smoke.cpp`：验证 `net` WebSocket endpoint 解析。
 - `tests/runtime/spsc_ring_smoke.cpp`：验证 SPSC ring 的顺序、满队列和双线程读写。
 - `tests/service/feed_session_smoke.cpp`：验证 feed session 重试、停止条件和统计。

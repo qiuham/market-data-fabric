@@ -2,7 +2,7 @@
 
 ## 仓库边界
 
-- `marketdata` 解析通联 MDL 字段并转换为统一 `BookOrder` / `BookTransaction`。
+- `marketdata` 解析通联 MDL 字段并转换为统一 `BookOrder` / `BookTrade`。
 - `trading-core` 定义统一事件，不包含供应商字段。
 - `orderbook` 的 `MboRebuilder` 按交易所序号消费事件，不识别通联快照。
 - `book-validate` 复用同一个 `MboRebuilder` 做离线对账，不维护第二套状态机。

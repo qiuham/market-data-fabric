@@ -5,7 +5,8 @@
 职责：
 
 - 统一 message envelope：raw provider message 和 normalized event 共用外层字段。
-- 标准事件结构：`Trade`、`Quote`、`BookUpdate`、`BookSnapshot`、`OrderEvent`、`Execution`、`Status`。
+- 标准事件结构：`Trade`、`Quote`、`BookUpdate`、`BookSnapshot`、
+  `BookOrder`、`BookTrade`、`TradingPhaseUpdate`。
 - `BookUpdate` 是 L2 聚合盘口的批量更新模型；旧的 `BookDelta` 仅保留为单价位兼容结构。
 - 标准 header：schema version、source id、venue id、instrument id、feed id、序号、时间戳、flags。
 - 统一 feed 描述：`FeedSpec`、`ResolvedFeed`、`FeedConnectionSpec` 和 raw provider message callback view。

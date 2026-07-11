@@ -85,7 +85,8 @@ int main() {
   assert(order.order_type == tc::OrderType::OwnBest);
   assert(order.price == 647500);
 
-  te::BookTransaction transaction{};
+  tl::TransactionMapOutput transaction_output{};
+  auto& transaction = transaction_output.trade;
   result = tl::map_transaction_row(
       sz,
       tl::TransactionRow{.time_hhmmssmmm = 93001000,
@@ -98,11 +99,11 @@ int main() {
                           .ask_order_id = 101,
                           .bid_order_id = 100,
                           .channel = 3},
-      transaction);
+      transaction_output);
   assert(result.status == tl::MapStatus::Mapped);
   assert(result.lossless);
-  assert(transaction.header.kind == tc::EventKind::BookTransaction);
-  assert(transaction.transaction_type == tc::BookTransactionType::Trade);
+  assert(transaction.header.kind == tc::EventKind::BookTrade);
+  assert(transaction_output.event_kind == tc::EventKind::BookTrade);
   assert(transaction.sell_order_id == 101);
   assert(transaction.buy_order_id == 100);
   assert(transaction.partition_id == 3);
@@ -120,7 +121,7 @@ int main() {
                           .ask_order_id = 101,
                           .bid_order_id = 105,
                           .channel = 3},
-      transaction);
+      transaction_output);
   assert(result.status == tl::MapStatus::Mapped);
   assert(transaction.aggressor_side == tc::AggressorSide::Buy);
 
@@ -135,7 +136,7 @@ int main() {
                           .ask_order_id = 106,
                           .bid_order_id = 100,
                           .channel = 3},
-      transaction);
+      transaction_output);
   assert(result.status == tl::MapStatus::Mapped);
   assert(transaction.aggressor_side == tc::AggressorSide::Sell);
 
@@ -149,10 +150,11 @@ int main() {
                           .quantity = 100,
                           .ask_order_id = 0,
                           .bid_order_id = 100},
-      transaction);
+      transaction_output);
   assert(result.status == tl::MapStatus::Mapped);
-  assert(transaction.transaction_type == tc::BookTransactionType::Cancel);
-  assert(transaction.canceled_order_id == 100);
+  assert(transaction_output.event_kind == tc::EventKind::BookOrder);
+  assert(transaction_output.order.action == tc::OrderAction::Cancel);
+  assert(transaction_output.order.order_id == 100);
 
   tl::MappingContext sh{};
   sh.market = tl::Market::Shanghai;
@@ -199,7 +201,7 @@ int main() {
       order);
   assert(result.status == tl::MapStatus::Ignored);
 
-  trading::events::Status status{};
+  trading::events::TradingPhaseUpdate status{};
   result = tl::map_status_row(
       sh,
       tl::OrderRow{.time_hhmmssmmm = 91400000,
@@ -226,10 +228,10 @@ int main() {
                           .quantity = 100,
                           .ask_order_id = 300,
                           .bid_order_id = 999},
-      transaction);
+      transaction_output);
   assert(result.status == tl::MapStatus::MappedDiagnostic);
   assert(!result.lossless);
-  assert(transaction.transaction_type == tc::BookTransactionType::Trade);
+  assert(transaction_output.event_kind == tc::EventKind::BookTrade);
   assert(transaction.resting_order_id == 300);
   assert(transaction.buy_order_id == 0);
   assert(transaction.sell_order_id == 0);
@@ -247,10 +249,10 @@ int main() {
                           .quantity = 600,
                           .ask_order_id = 301,
                           .bid_order_id = 302},
-      transaction);
+      transaction_output);
   assert(result.status == tl::MapStatus::MappedDiagnostic);
   assert(!result.lossless);
-  assert(transaction.transaction_type == tc::BookTransactionType::Trade);
+  assert(transaction_output.event_kind == tc::EventKind::BookTrade);
   assert(transaction.sell_order_id == 301);
   assert(transaction.buy_order_id == 302);
   assert(transaction.resting_order_id == 0);
@@ -267,10 +269,10 @@ int main() {
                           .quantity = 600,
                           .ask_order_id = 303,
                           .bid_order_id = 304},
-      transaction);
+      transaction_output);
   assert(result.status == tl::MapStatus::MappedDiagnostic);
   assert(!result.lossless);
-  assert(transaction.transaction_type == tc::BookTransactionType::Trade);
+  assert(transaction_output.event_kind == tc::EventKind::BookTrade);
   assert(transaction.sell_order_id == 303);
   assert(transaction.buy_order_id == 304);
   assert(transaction.resting_order_id == 0);

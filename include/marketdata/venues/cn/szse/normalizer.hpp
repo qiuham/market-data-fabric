@@ -51,17 +51,42 @@ namespace te = trading::events;
 
 [[nodiscard]] inline md::adapters::MapResult normalize(
     const EventContext& context, const TransactionView& view,
-    te::BookTransaction& out) noexcept {
-  if (view.trade_id == 0 || view.quantity <= 0 || view.price < 0) {
+    te::BookOrder& out) noexcept {
+  if (view.kind != TransactionKind::Cancel || view.quantity <= 0) {
+    return {md::adapters::MapStatus::Invalid, false};
+  }
+  const auto canceled_order_id =
+      view.ask_order_id != 0 ? view.ask_order_id : view.bid_order_id;
+  if (canceled_order_id == 0) {
     return {md::adapters::MapStatus::Invalid, false};
   }
 
-  te::BookTransaction event{};
-  fill_header(context, tc::EventKind::BookTransaction,
+  te::BookOrder event{};
+  fill_header(context, tc::EventKind::BookOrder, view.exchange_ts_ns,
+              view.event_seq, view.exchange_seq, event.header);
+  event.order_id = canceled_order_id;
+  event.partition_id = view.partition_id;
+  event.order_seq = view.exchange_seq;
+  event.quantity = view.quantity;
+  event.action = tc::OrderAction::Cancel;
+  out = event;
+  return {md::adapters::MapStatus::Mapped, true};
+}
+
+[[nodiscard]] inline md::adapters::MapResult normalize(
+    const EventContext& context, const TransactionView& view,
+    te::BookTrade& out) noexcept {
+  if (view.kind != TransactionKind::Trade || view.trade_id == 0 ||
+      view.quantity <= 0 || view.price < 0) {
+    return {md::adapters::MapStatus::Invalid, false};
+  }
+
+  te::BookTrade event{};
+  fill_header(context, tc::EventKind::BookTrade,
               view.exchange_ts_ns, view.event_seq, view.exchange_seq,
               event.header);
   event.trade_id = view.trade_id;
-  event.transaction_seq = view.trade_id;
+  event.trade_seq = view.trade_id;
   event.partition_id = view.partition_id;
   event.sell_order_id = view.ask_order_id;
   event.buy_order_id = view.bid_order_id;
@@ -69,20 +94,11 @@ namespace te = trading::events;
   event.quantity = view.quantity;
   event.aggressor_side = view.aggressor_side;
 
-  if (view.kind == TransactionKind::Cancel) {
-    event.transaction_type = tc::BookTransactionType::Cancel;
-    event.canceled_order_id =
-        view.ask_order_id != 0 ? view.ask_order_id : view.bid_order_id;
-  } else if (view.kind == TransactionKind::Trade) {
-    event.transaction_type = tc::BookTransactionType::Trade;
-    if (event.aggressor_side == tc::AggressorSide::Unknown &&
-        view.bid_order_id != 0 && view.ask_order_id != 0) {
-      event.aggressor_side = view.bid_order_id > view.ask_order_id
-                                 ? tc::AggressorSide::Buy
-                                 : tc::AggressorSide::Sell;
-    }
-  } else {
-    return {md::adapters::MapStatus::Unsupported, false};
+  if (event.aggressor_side == tc::AggressorSide::Unknown &&
+      view.bid_order_id != 0 && view.ask_order_id != 0) {
+    event.aggressor_side = view.bid_order_id > view.ask_order_id
+                               ? tc::AggressorSide::Buy
+                               : tc::AggressorSide::Sell;
   }
   out = event;
   return {md::adapters::MapStatus::Mapped, true};

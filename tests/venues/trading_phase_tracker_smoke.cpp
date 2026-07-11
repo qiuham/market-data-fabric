@@ -4,8 +4,7 @@
 
 int main() {
   md::venues::TradingPhaseTracker tracker;
-  trading::events::Status status{};
-  status.status_type = trading::core::StatusType::TradingPhase;
+  trading::events::TradingPhaseUpdate status{};
   status.trading_phase = trading::core::TradingPhase::Continuous;
   status.header.exchange_seq = 100;
   assert(tracker.apply(status) == md::venues::PhaseApplyStatus::Applied);

@@ -22,7 +22,7 @@ enum class OrderKind : std::uint8_t {
   AddMarket,
   AddOwnBest,
   Delete,
-  Status,
+  TradingPhase,
 };
 
 // 跨供应商稳定的中国证券交易阶段编码。供应商字符串只允许在 adapter 中出现，

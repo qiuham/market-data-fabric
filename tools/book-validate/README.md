@@ -13,7 +13,7 @@
                           |
                    Tonglian mapper
                           |
-             BookOrder / BookTransaction
+             BookOrder / BookTrade
                           |
                     MboRebuilder
                           |

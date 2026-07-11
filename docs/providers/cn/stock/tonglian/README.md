@@ -9,7 +9,7 @@ Tonglian row
   -> adapters/tonglian
   -> CN venue view
   -> SSE/SZSE normalizer
-  -> BookOrder / BookTransaction
+  -> BookOrder / BookTrade
 ```
 
 当前离线工作集：
@@ -40,6 +40,6 @@ CN_BOOK_CHECK_PYTHON=/path/to/python \
 ./build/event-trace journals/600006.SH.mdevt --trade 289538
 ```
 
-沪市 `Type=S` 会参与 Channel/BizIndex 连续性，并映射为 trading-core `Status`
+沪市 `Type=S` 会参与 Channel/BizIndex 连续性，并映射为 trading-core `TradingPhaseUpdate`
 供 phase tracker 和 journal 使用，但不修改订单簿。单证券过滤后的
 BizIndex 跳号不能判断丢包，完整 gap 检查必须位于证券过滤之前。

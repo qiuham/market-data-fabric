@@ -83,9 +83,8 @@ int main() {
       output);
   assert(mapped.continuity.accepted());
   assert(mapped.publishable());
-  assert(output.event_kind == trading::core::EventKind::Status);
-  assert(output.status.status_type == trading::core::StatusType::TradingPhase);
-  assert(output.status.trading_phase ==
+  assert(output.event_kind == trading::core::EventKind::TradingPhaseUpdate);
+  assert(output.phase_update.trading_phase ==
          trading::core::TradingPhase::Continuous);
 
   mapped = mapper.map(

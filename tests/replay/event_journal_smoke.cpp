@@ -17,7 +17,7 @@ int main() {
     order.quantity = 100;
     assert(writer.append(order, 3));
 
-    trading::events::BookTransaction transaction{};
+    trading::events::BookTrade transaction{};
     transaction.header.exchange_seq = 11;
     transaction.trade_id = 77;
     transaction.buy_order_id = 42;
@@ -44,11 +44,15 @@ int main() {
   assert(reader.next(record));
   assert(record.header.partition_id == 3);
   trading::events::BookOrder order{};
+  const auto current_schema = record.header.schema_version;
+  record.header.schema_version = 1;
+  assert(!record.decode(order));
+  record.header.schema_version = current_schema;
   assert(record.decode(order));
   assert(order.order_id == 42);
 
   assert(reader.next(record));
-  trading::events::BookTransaction transaction{};
+  trading::events::BookTrade transaction{};
   assert(record.decode(transaction));
   assert(transaction.trade_id == 77);
   assert(reader.next(record));

@@ -159,7 +159,10 @@ struct EventJournalRecord {
   template <typename Event>
   [[nodiscard]] bool decode(Event& out) const noexcept {
     static_assert(std::is_trivially_copyable_v<Event>);
-    if (payload.size() != sizeof(Event) ||
+    // C++ 事件结构不是跨版本 ABI。即使旧负载大小碰巧相同，也不能按当前结构解释；
+    // 历史版本应由显式迁移器读取后转换成当前标准事件。
+    if (header.schema_version != trading::core::kSchemaVersion ||
+        payload.size() != sizeof(Event) ||
         header.event_kind !=
             static_cast<std::uint16_t>(Event{}.header.kind)) {
       return false;
