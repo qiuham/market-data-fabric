@@ -82,7 +82,8 @@ int main() {
       order);
   assert(result.status == tl::MapStatus::Mapped);
   assert(result.lossless);
-  assert(order.order_type == tc::OrderType::OwnBest);
+  assert(order.order_type == tc::OrderType::Market);
+  assert(order.price_instruction == tc::PriceInstruction::OwnBest);
   assert(order.price == 647500);
 
   tl::TransactionMapOutput transaction_output{};

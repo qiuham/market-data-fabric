@@ -34,6 +34,7 @@ namespace te = trading::events;
   event.remaining_qty = view.quantity;
   event.side = view.side;
   event.order_type = tc::OrderType::Limit;
+  event.price_instruction = tc::PriceInstruction::ExplicitLimit;
   event.time_in_force = tc::TimeInForce::Day;
 
   if (view.kind == OrderKind::AddLimit) {

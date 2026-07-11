@@ -35,12 +35,16 @@ namespace te = trading::events;
   switch (view.kind) {
     case OrderKind::AddLimit:
       event.order_type = tc::OrderType::Limit;
+      event.price_instruction = tc::PriceInstruction::ExplicitLimit;
       break;
     case OrderKind::AddMarket:
       event.order_type = tc::OrderType::Market;
+      event.price_instruction = tc::PriceInstruction::UnpricedMarket;
       break;
     case OrderKind::AddOwnBest:
-      event.order_type = tc::OrderType::OwnBest;
+      event.order_type = tc::OrderType::Market;
+      event.price_instruction = tc::PriceInstruction::OwnBest;
+      event.remainder_policy = tc::RemainderPolicy::Rest;
       break;
     default:
       return {md::adapters::MapStatus::Unsupported, false};
