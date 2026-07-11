@@ -55,8 +55,10 @@ bool BinanceQuoteMapperHandler::on_message(
   if (stats != nullptr) {
     stats->observe_success(message);
   }
-  if (!log_events ||
-      (max_logged_events != 0 && logged_events >= max_logged_events)) {
+  // 0明确表示不输出逐事件日志，禁止把它解释成“无限”，避免误配置把日志I/O
+  // 带入行情热路径。
+  if (!log_events || max_logged_events == 0 ||
+      logged_events >= max_logged_events) {
     return true;
   }
 
@@ -94,8 +96,8 @@ bool BinanceTradeMapperHandler::on_message(
   if (stats != nullptr) {
     stats->observe_success(message);
   }
-  if (!log_events ||
-      (max_logged_events != 0 && logged_events >= max_logged_events)) {
+  if (!log_events || max_logged_events == 0 ||
+      logged_events >= max_logged_events) {
     return true;
   }
 
