@@ -34,6 +34,7 @@ target_link_libraries(your_target PRIVATE marketdata)
 provider raw message
   -> provider decoder
   -> provider mapper
+       -> SequenceGate（过滤前）
   -> market mapper
   -> trading-core event
   -> router
@@ -45,8 +46,17 @@ provider raw message
 虚函数或动态分配。
 
 provider路径固定为`providers/<market>/<provider>`，例如
-`providers/cn/stock/tonglian`和`providers/crypto/binance`。同市场多个provider复用
+`providers/cn/stock/tonglian`、`providers/cn/stock/csmar`和
+`providers/crypto/binance`。同市场多个provider复用
 `markets/<market>/<venue>`，不能复制一份交易所规则到每个provider中。
+
+`mappers/SequenceGate`由provider mapper持有，不增加运行层级。实时完整partition使用
+Contiguous模式检查严格连续；希施玛这类已经按单票拆分的离线文件使用Monotonic模式，
+只拒绝重复和回退，不能把其他证券造成的正常跳号误判成丢包。正常路径无锁、无分配。
+
+希施玛沪市ORDER与TRANSACTION按同一`RecID`合并后复用沪市市场mapper。集合竞价
+中性成交扣减双方事实委托；连续竞价B/S成交只扣减被动方，因为主动单可能直接成交
+而没有独立委托记录。该规则属于沪市语义，不在离线验证工具中重复实现。
 
 ## 构建
 

@@ -114,6 +114,12 @@ if (MDF_BUILD_TESTS)
     target_link_libraries(mdf-cn-stock-tonglian-mapper-smoke PRIVATE marketdata)
     add_test(NAME cn_stock_tonglian_mapper_smoke
              COMMAND mdf-cn-stock-tonglian-mapper-smoke)
+
+    add_executable(mdf-cn-stock-csmar-mapper-smoke
+                   tests/providers/cn/stock/csmar/mapper_smoke.cpp)
+    target_link_libraries(mdf-cn-stock-csmar-mapper-smoke PRIVATE marketdata)
+    add_test(NAME cn_stock_csmar_mapper_smoke
+             COMMAND mdf-cn-stock-csmar-mapper-smoke)
   else()
     message(STATUS "Skipping cn_stock_tonglian_mapper_smoke: trading-core include dir not found")
   endif()

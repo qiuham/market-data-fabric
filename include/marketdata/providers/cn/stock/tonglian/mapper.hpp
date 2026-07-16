@@ -1,6 +1,6 @@
 #pragma once
 
-#include "marketdata/mappers/map_outcome.hpp"
+#include "marketdata/mappers/sequence_gate.hpp"
 #include "marketdata/markets/cn/sse/mapper.hpp"
 #include "marketdata/markets/cn/szse/mapper.hpp"
 #include "trading/events/order_book.hpp"
@@ -27,141 +27,6 @@ using md::mappers::ContinuityState;
 using md::mappers::MapOutcome;
 using md::mappers::MapResult;
 using md::mappers::MapStatus;
-
-struct SequenceStats {
-  std::uint64_t accepted{};
-  std::uint64_t duplicates{};
-  std::uint64_t gaps{};
-  std::uint64_t regressions{};
-  std::uint64_t wrong_channel{};
-  std::uint64_t rejected_while_stale{};
-  std::uint64_t invalid{};
-};
-
-// 序号检查必须早于消息类型和证券代码过滤；即使某条状态消息不进入订单簿，
-// 它仍然占用交易所序号，必须推进当前 Channel 的连续性边界。
-class TonglianSequenceGate {
- public:
-  [[nodiscard]] ContinuityObservation observe(
-      std::uint64_t channel, std::uint64_t sequence) noexcept {
-    if (channel == 0 || sequence == 0) {
-      ++stats_.invalid;
-      return result(ContinuityEvent::Invalid, channel, sequence);
-    }
-    last_received_ = sequence;
-    if (state_ == ContinuityState::Uninitialized) {
-      ++stats_.rejected_while_stale;
-      return result(ContinuityEvent::AwaitingBaseline, channel, sequence);
-    }
-    if (channel != channel_) {
-      state_ = ContinuityState::Stale;
-      ++stats_.wrong_channel;
-      return result(ContinuityEvent::WrongPartition, channel, sequence);
-    }
-    if (state_ == ContinuityState::Stale ||
-        state_ == ContinuityState::Recovering) {
-      ++stats_.rejected_while_stale;
-      return result(ContinuityEvent::RejectedWhileStale, channel, sequence);
-    }
-
-    const auto expected = last_accepted_ + 1;
-    if (sequence == expected) {
-      last_accepted_ = sequence;
-      ++stats_.accepted;
-      return result(ContinuityEvent::Accepted, channel, sequence);
-    }
-    if (sequence == last_accepted_) {
-      ++stats_.duplicates;
-      return result(ContinuityEvent::Duplicate, channel, sequence);
-    }
-
-    state_ = ContinuityState::Stale;
-    if (sequence > expected) {
-      ++stats_.gaps;
-      return result(ContinuityEvent::Gap, channel, sequence, expected);
-    }
-    ++stats_.regressions;
-    return result(ContinuityEvent::Regression, channel, sequence, expected);
-  }
-
-  void begin_recovery() noexcept { state_ = ContinuityState::Recovering; }
-
-  // 恢复流必须逐条连续推进，不能用一个较大的尾序号直接“宣告恢复”，否则缺口
-  // 中间是否真正补齐无法证明。返回 Accepted 的记录才允许送往下游重放。
-  [[nodiscard]] ContinuityObservation observe_recovery(
-      std::uint64_t channel, std::uint64_t sequence) noexcept {
-    if (state_ != ContinuityState::Recovering || channel == 0 ||
-        channel != channel_) {
-      return result(ContinuityEvent::Invalid, channel, sequence);
-    }
-    const auto expected = last_accepted_ + 1;
-    if (sequence != expected) {
-      return result(sequence < expected ? ContinuityEvent::Regression
-                                        : ContinuityEvent::Gap,
-                    channel, sequence, expected);
-    }
-    last_accepted_ = sequence;
-    return result(ContinuityEvent::Accepted, channel, sequence);
-  }
-
-  // Uninitialized 时用于 checkpoint/replay 建立可信基线；Recovering 时只允许在
-  // 调用方声明的已重放尾序号与内部逐条推进位置完全一致后恢复实时发布。
-  [[nodiscard]] bool complete_recovery(std::uint64_t channel,
-                                       std::uint64_t sequence) noexcept {
-    if (channel == 0) {
-      return false;
-    }
-    if (state_ == ContinuityState::Recovering &&
-        (channel != channel_ || sequence != last_accepted_)) {
-      return false;
-    }
-    if (state_ != ContinuityState::Uninitialized &&
-        state_ != ContinuityState::Recovering) {
-      return false;
-    }
-    channel_ = channel;
-    last_accepted_ = sequence;
-    last_received_ = sequence;
-    state_ = ContinuityState::Healthy;
-    return true;
-  }
-
-  void reset() noexcept {
-    state_ = ContinuityState::Uninitialized;
-    channel_ = 0;
-    last_accepted_ = 0;
-    last_received_ = 0;
-  }
-
-  [[nodiscard]] ContinuityState state() const noexcept { return state_; }
-  [[nodiscard]] bool book_trusted() const noexcept {
-    return state_ == ContinuityState::Healthy;
-  }
-  [[nodiscard]] std::uint64_t channel() const noexcept { return channel_; }
-  [[nodiscard]] std::uint64_t last_accepted() const noexcept {
-    return last_accepted_;
-  }
-  [[nodiscard]] std::uint64_t last_received() const noexcept {
-    return last_received_;
-  }
-  [[nodiscard]] const SequenceStats& stats() const noexcept { return stats_; }
-
- private:
-  [[nodiscard]] ContinuityObservation result(
-      ContinuityEvent event, std::uint64_t channel, std::uint64_t received,
-      std::uint64_t expected = 0) const noexcept {
-    if (expected == 0 && last_accepted_ != 0) {
-      expected = last_accepted_ + 1;
-    }
-    return ContinuityObservation{event, state_, channel, expected, received};
-  }
-
-  ContinuityState state_{ContinuityState::Uninitialized};
-  std::uint64_t channel_{};
-  std::uint64_t last_accepted_{};
-  std::uint64_t last_received_{};
-  SequenceStats stats_{};
-};
 
 struct MappingContext {
   tc::SourceId source_id{kCnStockTonglianSourceId};
@@ -431,16 +296,17 @@ class TonglianMapper {
   }
 
   [[nodiscard]] bool stream_trusted() const noexcept {
-    return sequence_.book_trusted();
+    return sequence_.trusted();
   }
 
-  [[nodiscard]] const SequenceStats& sequence_stats() const noexcept {
+  [[nodiscard]] const md::mappers::SequenceStats&
+  sequence_stats() const noexcept {
     return sequence_.stats();
   }
 
  private:
   MappingContext context_{};
-  TonglianSequenceGate sequence_{};
+  md::mappers::SequenceGate sequence_{};
 };
 
 }  // namespace md::providers::tonglian

@@ -3,9 +3,10 @@
 #include <cassert>
 
 namespace tl = md::providers::tonglian;
+namespace mm = md::mappers;
 
 int main() {
-  tl::TonglianSequenceGate gate;
+  mm::SequenceGate gate;
   auto result = gate.observe(3, 100);
   assert(result.event == tl::ContinuityEvent::AwaitingBaseline);
   assert(!result.trusted());
@@ -38,7 +39,7 @@ int main() {
 
   result = gate.observe(4, 107);
   assert(result.event == tl::ContinuityEvent::WrongPartition);
-  assert(!gate.book_trusted());
+  assert(!gate.trusted());
 
   gate.reset();
   assert(!gate.observe(3, 200).accepted());
@@ -52,7 +53,7 @@ int main() {
   assert(stats.duplicates == 1);
   assert(stats.gaps == 1);
   assert(stats.regressions == 1);
-  assert(stats.wrong_channel == 1);
+  assert(stats.wrong_partition == 1);
   assert(stats.rejected_while_stale == 3);
 
   tl::MappingContext context{};

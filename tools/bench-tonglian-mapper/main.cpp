@@ -22,14 +22,20 @@ int main(int argc, char** argv) {
     }
   }
 
-  tl::TonglianSequenceGate gate;
+  md::mappers::SequenceGate gate;
   if (!gate.complete_recovery(3, 0)) {
     std::cerr << "无法建立序号基线\n";
     return 1;
   }
   const auto start = std::chrono::steady_clock::now();
   for (std::uint64_t sequence = 1; sequence <= iterations; ++sequence) {
-    if (!gate.observe(3, sequence).accepted()) {
+    auto observed_sequence = sequence;
+#if defined(__clang__) || defined(__GNUC__)
+    // 阻止编译器把已知连续序列的整个循环折叠成最终计数；只保留一个寄存器
+    // 屏障，不引入函数调用、锁或内存分配。
+    asm volatile("" : "+r"(observed_sequence) : : "memory");
+#endif
+    if (!gate.observe(3, observed_sequence).accepted()) {
       std::cerr << "序号被意外拒绝: " << sequence << '\n';
       return 1;
     }
